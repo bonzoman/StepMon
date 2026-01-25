@@ -76,37 +76,4 @@ struct ContentView: View {
     }
 }
 
-// SettingsView.swift
-struct SettingsView: View {
-    @Environment(\.dismiss) var dismiss
-    @Query var preferences: [UserPreference]
-    
-    var body: some View {
-        NavigationStack {
-            Form {
-                if let pref = preferences.first {
-                    Section("조건 설정") {
-                        VStack(alignment: .leading) {
-                            Text("검사 간격: \(pref.checkIntervalMinutes)분")
-                            Slider(value: Binding(
-                                get: { Double(pref.checkIntervalMinutes) },
-                                set: { pref.checkIntervalMinutes = Int($0) }
-                            ), in: 15...120, step: 15)
-                        }
-                        
-                        Stepper("기준 걸음 수: \(pref.stepThreshold)", value: Bindable(pref).stepThreshold, in: 50...1000, step: 50)
-                    }
-                    Section {
-                        Text("앱을 종료하지 말고 홈 화면으로 이동(백그라운드)해두세요. 시스템이 최적의 시간에 체크합니다.")
-                            .font(.caption)
-                            .foregroundStyle(.gray)
-                    }
-                }
-            }
-            .navigationTitle("설정")
-            .toolbar {
-                Button("완료") { dismiss() }
-            }
-        }
-    }
-}
+
