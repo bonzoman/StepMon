@@ -15,7 +15,7 @@ import SwiftData
 
 class BackgroundStepManager {
     static let shared = BackgroundStepManager()
-    let taskId = "bnz.stepmon.stepcheck.refresh" // Info.plist와 일치 필수
+    let taskId = "bnz.stepmon.stepcheck.refresh" // Info.plist와 일치 필수.
     
     private let pedometer = CMPedometer()
     private let center = UNUserNotificationCenter.current()
