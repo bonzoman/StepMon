@@ -4,41 +4,48 @@
 //
 //  Created by 오승준 on 1/26/26.
 //
+//
 
 import WidgetKit
 import SwiftUI
 
-struct Provider: AppIntentTimelineProvider {
+struct Provider: TimelineProvider {
+    // App Group ID (메인 앱과 동일하게 설정)
+    let appGroupId = "group.com.bnz.StepMon" // 본인의 App Group ID로 수정 필수
+    
     func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), configuration: ConfigurationAppIntent())
+        SimpleEntry(date: Date(), steps: 1234)
     }
 
-    func snapshot(for configuration: ConfigurationAppIntent, in context: Context) async -> SimpleEntry {
-        SimpleEntry(date: Date(), configuration: configuration)
+    func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> ()) {
+        let steps = fetchStepsFromDefaults()
+        let entry = SimpleEntry(date: Date(), steps: steps)
+        completion(entry)
+    }
+
+    func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
+        // 타임라인 갱신: 메인 앱에서 reloadAllTimelines()를 호출할 때 갱신됨
+        // 혹은 30분마다 자동 갱신
+        let steps = fetchStepsFromDefaults()
+        let currentDate = Date()
+        let refreshDate = Calendar.current.date(byAdding: .minute, value: 30, to: currentDate)!
+        
+        let entry = SimpleEntry(date: currentDate, steps: steps)
+        let timeline = Timeline(entries: [entry], policy: .after(refreshDate))
+        completion(timeline)
     }
     
-    func timeline(for configuration: ConfigurationAppIntent, in context: Context) async -> Timeline<SimpleEntry> {
-        var entries: [SimpleEntry] = []
-
-        // Generate a timeline consisting of five entries an hour apart, starting from the current date.
-        let currentDate = Date()
-        for hourOffset in 0 ..< 5 {
-            let entryDate = Calendar.current.date(byAdding: .hour, value: hourOffset, to: currentDate)!
-            let entry = SimpleEntry(date: entryDate, configuration: configuration)
-            entries.append(entry)
+    private func fetchStepsFromDefaults() -> Int {
+        if let sharedDefaults = UserDefaults(suiteName: appGroupId) {
+            return sharedDefaults.integer(forKey: "widgetSteps")
         }
-
-        return Timeline(entries: entries, policy: .atEnd)
+        return 0
     }
-
-//    func relevances() async -> WidgetRelevances<ConfigurationAppIntent> {
-//        // Generate a list containing the contexts this widget is relevant in.
-//    }
 }
 
 struct SimpleEntry: TimelineEntry {
     let date: Date
-    let configuration: ConfigurationAppIntent
+    let steps: Int
 }
 
 struct StepMonWidgetEntryView : View {
@@ -46,43 +53,35 @@ struct StepMonWidgetEntryView : View {
 
     var body: some View {
         VStack {
-            Text("Time:")
-            Text(entry.date, style: .time)
-
-            Text("Favorite Emoji:")
-            Text(entry.configuration.favoriteEmoji)
+            Text("오늘의 걸음")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            
+            Text("\(entry.steps)")
+                .font(.system(size: 36, weight: .bold, design: .rounded))
+                .minimumScaleFactor(0.5)
+                .padding(.vertical, 2)
+            
+            Text("StepMon")
+                .font(.system(size: 10))
+                .foregroundStyle(.gray.opacity(0.5))
+        }
+        .containerBackground(for: .widget) {
+            Color.white
         }
     }
 }
 
+//@main
 struct StepMonWidget: Widget {
     let kind: String = "StepMonWidget"
 
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: kind, intent: ConfigurationAppIntent.self, provider: Provider()) { entry in
+        StaticConfiguration(kind: kind, provider: Provider()) { entry in
             StepMonWidgetEntryView(entry: entry)
-                .containerBackground(.fill.tertiary, for: .widget)
         }
+        .configurationDisplayName("Step Monitor")
+        .description("오늘의 걸음 수를 확인하세요.")
+        .supportedFamilies([.systemSmall])
     }
-}
-
-extension ConfigurationAppIntent {
-    fileprivate static var smiley: ConfigurationAppIntent {
-        let intent = ConfigurationAppIntent()
-        intent.favoriteEmoji = "😀"
-        return intent
-    }
-    
-    fileprivate static var starEyes: ConfigurationAppIntent {
-        let intent = ConfigurationAppIntent()
-        intent.favoriteEmoji = "🤩"
-        return intent
-    }
-}
-
-#Preview(as: .systemSmall) {
-    StepMonWidget()
-} timeline: {
-    SimpleEntry(date: .now, configuration: .smiley)
-    SimpleEntry(date: .now, configuration: .starEyes)
 }

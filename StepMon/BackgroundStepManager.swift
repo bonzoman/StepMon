@@ -8,16 +8,15 @@
 //
 
 import Foundation
-import CoreMotion
 import BackgroundTasks
 import UserNotifications
 import SwiftData
+import HealthKit // 추가
 
 class BackgroundStepManager {
     static let shared = BackgroundStepManager()
-    let taskId = "bnz.stepmon.stepcheck.refresh" // Info.plist와 일치 필수.
+    let taskId = "bnz.stepmon.stepcheck.refresh"
     
-    private let pedometer = CMPedometer()
     private let center = UNUserNotificationCenter.current()
     var modelContainer: ModelContainer?
     
@@ -68,59 +67,38 @@ class BackgroundStepManager {
             return
         }
         
-        // --- [추가된 로직] 시간 체크 ---
-        // 현재 시간이 설정된 범위 밖이라면 알림을 보내지 않고 종료
         if !isTimeInRange(start: pref.startTime, end: pref.endTime) {
-            print("현재는 방해 금지 시간입니다. 알림을 건너뜁니다.")
+            print("방해 금지 시간. 알림 건너뜀.")
             completion(true)
             return
         }
-        // -------------------------
         
         let interval = Double(pref.checkIntervalMinutes * 60)
         let threshold = pref.stepThreshold
         let now = Date()
         let startDate = now.addingTimeInterval(-interval)
         
-        if CMPedometer.isStepCountingAvailable() {
-            pedometer.queryPedometerData(from: startDate, to: now) { [weak self] data, error in
-                guard let data = data, error == nil else {
-                    completion(false)
-                    return
-                }
-                
-                let steps = data.numberOfSteps.intValue
-                if steps < threshold {
-                    self?.sendNotification(steps: steps, threshold: threshold)
-                }
-                completion(true)
+        // [변경됨] HealthKitManager 사용
+        HealthKitManager.shared.fetchStepCount(from: startDate, to: now) { steps in
+            if steps < threshold {
+                self.sendNotification(steps: steps, threshold: threshold)
             }
-        } else {
-            completion(false)
+            completion(true)
         }
     }
     
-    // --- [새로 만든 함수] 현재 시간이 범위 내인지 판별 ---
     private func isTimeInRange(start: Date, end: Date) -> Bool {
-        let now = Date()
         let calendar = Calendar.current
+        let now = Date()
         
-        // 날짜는 무시하고 '시(Hour)'와 '분(Minute)'만 추출
-        let nowComp = calendar.dateComponents([.hour, .minute], from: now)
-        let startComp = calendar.dateComponents([.hour, .minute], from: start)
-        let endComp = calendar.dateComponents([.hour, .minute], from: end)
+        let nowMin = (calendar.component(.hour, from: now) * 60) + calendar.component(.minute, from: now)
+        let startMin = (calendar.component(.hour, from: start) * 60) + calendar.component(.minute, from: start)
+        let endMin = (calendar.component(.hour, from: end) * 60) + calendar.component(.minute, from: end)
         
-        // 분 단위로 변환 (예: 1시 30분 -> 90분)
-        let nowMinutes = (nowComp.hour! * 60) + nowComp.minute!
-        let startMinutes = (startComp.hour! * 60) + startComp.minute!
-        let endMinutes = (endComp.hour! * 60) + endComp.minute!
-        
-        if startMinutes <= endMinutes {
-            // 예: 09:00 ~ 22:00 (낮 시간 동안만)
-            return nowMinutes >= startMinutes && nowMinutes <= endMinutes
+        if startMin <= endMin {
+            return nowMin >= startMin && nowMin <= endMin
         } else {
-            // 예: 22:00 ~ 07:00 (밤샘 설정인 경우 - 거의 없겠지만 예외처리)
-            return nowMinutes >= startMinutes || nowMinutes <= endMinutes
+            return nowMin >= startMin || nowMin <= endMin
         }
     }
     
@@ -130,7 +108,7 @@ class BackgroundStepManager {
         content.body = "목표: \(threshold)보 / 현재: \(steps)보. 잠시 걸어보세요!"
         content.sound = .default
         
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil) // 즉시 발송
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         center.add(request)
     }
 }

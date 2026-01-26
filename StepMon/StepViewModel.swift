@@ -8,21 +8,35 @@
 //
 
 import SwiftUI
-import CoreMotion
+import WidgetKit // 위젯 갱신을 위해 필요
 
 @Observable
 class StepViewModel {
     var currentSteps: Int = 0
-    private let pedometer = CMPedometer()
     
     func startUpdates() {
-        guard CMPedometer.isStepCountingAvailable() else { return }
+        // 1. 권한 요청 먼저 실행
+        HealthKitManager.shared.requestAuthorization { success in
+            if success {
+                self.fetchTodaySteps()
+            }
+        }
+    }
+    
+    func fetchTodaySteps() {
+        let now = Date()
+        let startOfDay = Calendar.current.startOfDay(for: now)
         
-        let midnight = Calendar.current.startOfDay(for: Date())
-        pedometer.startUpdates(from: midnight) { data, error in
-            guard let data = data, error == nil else { return }
+        HealthKitManager.shared.fetchStepCount(from: startOfDay, to: now) { steps in
             DispatchQueue.main.async {
-                self.currentSteps = data.numberOfSteps.intValue
+                self.currentSteps = steps
+                // 위젯과 공유하기 위해 UserDefaults(App Group)에 저장
+                // "group.com.yourname.StepMon" 부분은 Capabilities에서 설정한 이름과 같아야 합니다.
+                if let sharedDefaults = UserDefaults(suiteName: "group.com.bnz.StepMon") {
+                    sharedDefaults.set(steps, forKey: "widgetSteps")
+                    // 위젯 갱신 요청
+                    WidgetCenter.shared.reloadAllTimelines()
+                }
             }
         }
     }

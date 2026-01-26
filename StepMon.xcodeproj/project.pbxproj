@@ -6,7 +6,20 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		0B433B212F27B1FA005A42E4 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B433B202F27B1FA005A42E4 /* WidgetKit.framework */; };
+		0B433B232F27B1FA005A42E4 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B433B222F27B1FA005A42E4 /* SwiftUI.framework */; };
+		0B433B342F27B1FB005A42E4 /* StepMonWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0B433B1E2F27B1FA005A42E4 /* StepMonWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
+		0B433B322F27B1FB005A42E4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0BBA62152F24F1AD00301AAE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0B433B1D2F27B1FA005A42E4;
+			remoteInfo = StepMonWidgetExtension;
+		};
 		0BBA622D2F24F1AE00301AAE /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 0BBA62152F24F1AD00301AAE /* Project object */;
@@ -23,13 +36,38 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		0B433B392F27B1FB005A42E4 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				0B433B342F27B1FB005A42E4 /* StepMonWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		0B433B1E2F27B1FA005A42E4 /* StepMonWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = StepMonWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		0B433B202F27B1FA005A42E4 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		0B433B222F27B1FA005A42E4 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		0B433B3A2F27B289005A42E4 /* StepMonWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = StepMonWidgetExtension.entitlements; sourceTree = "<group>"; };
 		0BBA621D2F24F1AD00301AAE /* StepMon.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StepMon.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0BBA622C2F24F1AE00301AAE /* StepMonTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StepMonTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0BBA62362F24F1AE00301AAE /* StepMonUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StepMonUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		0B433B382F27B1FB005A42E4 /* Exceptions for "StepMonWidget" folder in "StepMonWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 0B433B1D2F27B1FA005A42E4 /* StepMonWidgetExtension */;
+		};
 		0B476C5B2F24F43C00BD86B3 /* Exceptions for "StepMon" folder in "StepMon" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -40,6 +78,14 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		0B433B242F27B1FA005A42E4 /* StepMonWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				0B433B382F27B1FB005A42E4 /* Exceptions for "StepMonWidget" folder in "StepMonWidgetExtension" target */,
+			);
+			path = StepMonWidget;
+			sourceTree = "<group>";
+		};
 		0BBA621F2F24F1AD00301AAE /* StepMon */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -61,6 +107,15 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		0B433B1B2F27B1FA005A42E4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0B433B232F27B1FA005A42E4 /* SwiftUI.framework in Frameworks */,
+				0B433B212F27B1FA005A42E4 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		0BBA621A2F24F1AD00301AAE /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -85,12 +140,24 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0B433B1F2F27B1FA005A42E4 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				0B433B202F27B1FA005A42E4 /* WidgetKit.framework */,
+				0B433B222F27B1FA005A42E4 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		0BBA62142F24F1AD00301AAE = {
 			isa = PBXGroup;
 			children = (
+				0B433B3A2F27B289005A42E4 /* StepMonWidgetExtension.entitlements */,
 				0BBA621F2F24F1AD00301AAE /* StepMon */,
 				0BBA622F2F24F1AE00301AAE /* StepMonTests */,
 				0BBA62392F24F1AE00301AAE /* StepMonUITests */,
+				0B433B242F27B1FA005A42E4 /* StepMonWidget */,
+				0B433B1F2F27B1FA005A42E4 /* Frameworks */,
 				0BBA621E2F24F1AD00301AAE /* Products */,
 			);
 			sourceTree = "<group>";
@@ -101,6 +168,7 @@
 				0BBA621D2F24F1AD00301AAE /* StepMon.app */,
 				0BBA622C2F24F1AE00301AAE /* StepMonTests.xctest */,
 				0BBA62362F24F1AE00301AAE /* StepMonUITests.xctest */,
+				0B433B1E2F27B1FA005A42E4 /* StepMonWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -108,6 +176,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		0B433B1D2F27B1FA005A42E4 /* StepMonWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0B433B352F27B1FB005A42E4 /* Build configuration list for PBXNativeTarget "StepMonWidgetExtension" */;
+			buildPhases = (
+				0B433B1A2F27B1FA005A42E4 /* Sources */,
+				0B433B1B2F27B1FA005A42E4 /* Frameworks */,
+				0B433B1C2F27B1FA005A42E4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				0B433B242F27B1FA005A42E4 /* StepMonWidget */,
+			);
+			name = StepMonWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = StepMonWidgetExtension;
+			productReference = 0B433B1E2F27B1FA005A42E4 /* StepMonWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		0BBA621C2F24F1AD00301AAE /* StepMon */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 0BBA62402F24F1AE00301AAE /* Build configuration list for PBXNativeTarget "StepMon" */;
@@ -115,10 +205,12 @@
 				0BBA62192F24F1AD00301AAE /* Sources */,
 				0BBA621A2F24F1AD00301AAE /* Frameworks */,
 				0BBA621B2F24F1AD00301AAE /* Resources */,
+				0B433B392F27B1FB005A42E4 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				0B433B332F27B1FB005A42E4 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				0BBA621F2F24F1AD00301AAE /* StepMon */,
@@ -186,6 +278,9 @@
 				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
+					0B433B1D2F27B1FA005A42E4 = {
+						CreatedOnToolsVersion = 26.2;
+					};
 					0BBA621C2F24F1AD00301AAE = {
 						CreatedOnToolsVersion = 26.2;
 					};
@@ -216,11 +311,19 @@
 				0BBA621C2F24F1AD00301AAE /* StepMon */,
 				0BBA622B2F24F1AE00301AAE /* StepMonTests */,
 				0BBA62352F24F1AE00301AAE /* StepMonUITests */,
+				0B433B1D2F27B1FA005A42E4 /* StepMonWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		0B433B1C2F27B1FA005A42E4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		0BBA621B2F24F1AD00301AAE /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -245,6 +348,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		0B433B1A2F27B1FA005A42E4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		0BBA62192F24F1AD00301AAE /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -269,6 +379,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		0B433B332F27B1FB005A42E4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0B433B1D2F27B1FA005A42E4 /* StepMonWidgetExtension */;
+			targetProxy = 0B433B322F27B1FB005A42E4 /* PBXContainerItemProxy */;
+		};
 		0BBA622E2F24F1AE00301AAE /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 0BBA621C2F24F1AD00301AAE /* StepMon */;
@@ -282,6 +397,68 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		0B433B362F27B1FB005A42E4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = StepMonWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6N5396RU93;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StepMonWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = StepMonWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = bnz.StepMon.StepMonWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		0B433B372F27B1FB005A42E4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = StepMonWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6N5396RU93;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StepMonWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = StepMonWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = bnz.StepMon.StepMonWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		0BBA623E2F24F1AE00301AAE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -406,12 +583,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = StepMon/StepMon.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 6N5396RU93;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = StepMon/Info.plist;
+				INFOPLIST_KEY_NSMotionUsageDescription = "걸음 수를 측정하여 알림을 보내기 위해 필요";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -439,12 +618,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = StepMon/StepMon.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 6N5396RU93;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = StepMon/Info.plist;
+				INFOPLIST_KEY_NSMotionUsageDescription = "걸음 수를 측정하여 알림을 보내기 위해 필요";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -550,6 +731,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		0B433B352F27B1FB005A42E4 /* Build configuration list for PBXNativeTarget "StepMonWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0B433B362F27B1FB005A42E4 /* Debug */,
+				0B433B372F27B1FB005A42E4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		0BBA62182F24F1AD00301AAE /* Build configuration list for PBXProject "StepMon" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
