@@ -64,8 +64,18 @@ struct ContentView: View {
             }
             // 앱이 백그라운드로 갈 때 작업 스케줄링
             .onChange(of: scenePhase) { oldPhase, newPhase in
-                if newPhase == .background {
+                switch newPhase {
+                case .active:
+                    // 1. 앱이 다시 활성화될 때(화면 켜질 때) 즉시 걸음 수 갱신
+                    print("앱 활성화: 걸음 수 새로고침")
+                    viewModel.fetchTodaySteps()
+                    
+                case .background:
+                    // 2. 앱이 백그라운드로 갈 때 작업 스케줄링 (기존 로직)
                     BackgroundStepManager.shared.scheduleAppRefresh()
+                    
+                default:
+                    break
                 }
             }
         }

@@ -34,8 +34,14 @@ class StepViewModel {
                 // "group.com.yourname.StepMon" 부분은 Capabilities에서 설정한 이름과 같아야 합니다.
                 if let sharedDefaults = UserDefaults(suiteName: "group.com.bnz.StepMon") {
                     sharedDefaults.set(steps, forKey: "widgetSteps")
+                    
+                    let success = sharedDefaults.synchronize() // 데이터 강제 동기화 시도
+                    print("위젯 데이터 저장 결과: \(success), 값: \(steps)")
+                    
                     // 위젯 갱신 요청
                     WidgetCenter.shared.reloadAllTimelines()
+                } else {
+                    print("⚠️ App Group UserDefaults를 찾을 수 없습니다.")
                 }
             }
         }
