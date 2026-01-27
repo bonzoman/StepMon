@@ -11,7 +11,7 @@ import Foundation
 import BackgroundTasks
 import UserNotifications
 import SwiftData
-import HealthKit // 추가
+import CoreMotion
 
 class BackgroundStepManager {
     static let shared = BackgroundStepManager()
@@ -67,6 +67,7 @@ class BackgroundStepManager {
             return
         }
         
+        // 방해 금지 시간 체크 로직 (그대로 유지)
         if !isTimeInRange(start: pref.startTime, end: pref.endTime) {
             print("방해 금지 시간. 알림 건너뜀.")
             completion(true)
@@ -78,8 +79,10 @@ class BackgroundStepManager {
         let now = Date()
         let startDate = now.addingTimeInterval(-interval)
         
-        // [변경됨] HealthKitManager 사용
-        HealthKitManager.shared.fetchStepCount(from: startDate, to: now) { steps in
+        // [수정됨] HealthKitManager -> CoreMotionManager 사용
+        print("🔍 CoreMotion: \(pref.checkIntervalMinutes)분 전부터 현재까지 걸음 수 조회 시작")
+        CoreMotionManager.shared.querySteps(from: startDate, to: now) { steps in
+            print("🚶 측정된 걸음 수: \(steps) / 목표: \(threshold)")
             if steps < threshold {
                 self.sendNotification(steps: steps, threshold: threshold)
             }

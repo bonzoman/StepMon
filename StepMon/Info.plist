@@ -11,9 +11,5 @@
 		<string>fetch</string>
 		<string>remote-notification</string>
 	</array>
-    <key>NSHealthShareUsageDescription</key>
-    <string>걸음 수 데이터를 분석하여 활동 알림을 보내고 위젯에 표시하기 위해 필요합니다.</string>
-    <key>NSHealthUpdateUsageDescription</key>
-    <string>앱에서 측정한 데이터를 건강 앱에 저장하기 위해 필요합니다.</string>
 </dict>
 </plist>

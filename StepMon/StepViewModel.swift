@@ -1,49 +1,58 @@
 //
 //  StepViewModel.swift
 //  StepMon
-//  실시간 걸음 수 표시
-//  - 메인 화면에서 사용할 실시간 데이터용 클래스
 //
 //  Created by 오승준 on 1/25/26.
 //
 
 import SwiftUI
-import WidgetKit // 위젯 갱신을 위해 필요
+import WidgetKit
+// HealthKit 제거
 
 @Observable
 class StepViewModel {
     var currentSteps: Int = 0
     
     func startUpdates() {
-        // 1. 권한 요청 먼저 실행
-        HealthKitManager.shared.requestAuthorization { success in
-            if success {
-                self.fetchTodaySteps()
+        // 오늘 자정부터 현재까지의 걸음 수 추적 시작
+        let now = Date()
+        let startOfDay = Calendar.current.startOfDay(for: now)
+        
+        // 실시간 업데이트 시작
+        CoreMotionManager.shared.startMonitoring(from: startOfDay) { [weak self] steps in
+            DispatchQueue.main.async {
+                self?.currentSteps = steps
+                self?.updateWidget(steps: steps)
             }
         }
     }
     
+    // 앱이 포그라운드로 돌아올 때 호출 (혹은 명시적 새로고침)
     func fetchTodaySteps() {
         let now = Date()
         let startOfDay = Calendar.current.startOfDay(for: now)
         
-        HealthKitManager.shared.fetchStepCount(from: startOfDay, to: now) { steps in
+        CoreMotionManager.shared.querySteps(from: startOfDay, to: now) { [weak self] steps in
             DispatchQueue.main.async {
-                self.currentSteps = steps
-                // 위젯과 공유하기 위해 UserDefaults(App Group)에 저장
-                // "group.com.yourname.StepMon" 부분은 Capabilities에서 설정한 이름과 같아야 합니다.
-                if let sharedDefaults = UserDefaults(suiteName: "group.com.bnz.StepMon") {
-                    sharedDefaults.set(steps, forKey: "widgetSteps")
-                    
-                    let success = sharedDefaults.synchronize() // 데이터 강제 동기화 시도
-                    print("위젯 데이터 저장 결과: \(success), 값: \(steps)")
-                    
-                    // 위젯 갱신 요청
-                    WidgetCenter.shared.reloadAllTimelines()
-                } else {
-                    print("⚠️ App Group UserDefaults를 찾을 수 없습니다.")
-                }
+                self?.currentSteps = steps
+                self?.updateWidget(steps: steps)
+                
+                // 쿼리 후에도 실시간 감지를 계속 유지하기 위해 재호출 가능
+                self?.startUpdates()
             }
         }
+    }
+    
+    private func updateWidget(steps: Int) {
+        if let sharedDefaults = UserDefaults(suiteName: "group.com.bnz.StepMon") {
+            sharedDefaults.set(steps, forKey: "widgetSteps")
+            sharedDefaults.synchronize()
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+    }
+    
+    // 뷰모델이 해제될 때 센서 중지 (선택 사항)
+    deinit {
+        CoreMotionManager.shared.stopMonitoring()
     }
 }
