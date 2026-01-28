@@ -67,9 +67,9 @@ class BackgroundStepManager {
             return
         }
         
-        // 방해 금지 시간 체크 로직 (그대로 유지)
+        // 알림 시간 체크 로직
         if !isTimeInRange(start: pref.startTime, end: pref.endTime) {
-            print("방해 금지 시간. 알림 건너뜀.")
+            print("알림 건너뜀.")
             completion(true)
             return
         }

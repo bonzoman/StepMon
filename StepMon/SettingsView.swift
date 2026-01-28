@@ -29,7 +29,7 @@ struct SettingsView: View {
                     }
                     
                     // --- [추가된 섹션] ---
-                    Section("방해 금지 시간 설정") {
+                    Section("알림 시간 설정") {
                         DatePicker("알림 시작", selection: Bindable(pref).startTime, displayedComponents: .hourAndMinute)
                         DatePicker("알림 종료", selection: Bindable(pref).endTime, displayedComponents: .hourAndMinute)
                         

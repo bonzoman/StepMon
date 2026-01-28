@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>NSMotionUsageDescription</key>
+    <string>걸음 수를 측정하여 알림을 보내기 위해 필요</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>bnz.stepmon.stepcheck.refresh</string>
