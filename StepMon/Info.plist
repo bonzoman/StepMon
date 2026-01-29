@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>NSMotionUsageDescription</key>
-    <string>걸음 수를 측정하여 알림을 보내기 위해 필요</string>
+    <string>걸음 수를 측정하여 알림을 보내기 위해 동작 감지 권한이 필요합니다.</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>bnz.stepmon.stepcheck.refresh</string>
