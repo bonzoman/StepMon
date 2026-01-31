@@ -61,13 +61,14 @@ struct StepMonWidgetEntryView : View {
                 .font(.system(size: 36, weight: .bold, design: .rounded))
                 .minimumScaleFactor(0.5)
                 .padding(.vertical, 2)
+                .foregroundStyle(.primary) // .black 대신 .primary 사용
             
             Text("StepMon")
                 .font(.system(size: 10))
                 .foregroundStyle(.gray.opacity(0.5))
         }
         .containerBackground(for: .widget) {
-            Color.white
+            Color(uiColor: .systemBackground) // 혹은 원하는 배경색
         }
     }
 }

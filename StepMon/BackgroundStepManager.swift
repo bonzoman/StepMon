@@ -1,12 +1,3 @@
-//
-//  BackgroundStepManager.swift
-//  StepMon
-//  백그라운드 동작 관리자
-//  - 백그라운드 작업을 등록하고, 실행하고, 스케줄링하는 핵심 클래스
-//  - SwiftData 컨테이너를 직접 주입받아 백그라운드 스레드에서 데이터를 안전하게 읽습니다.
-//  Created by 오승준 on 1/25/26.
-//
-
 import Foundation
 import BackgroundTasks
 import UserNotifications
@@ -67,25 +58,34 @@ class BackgroundStepManager {
             return
         }
         
-        // 알림 시간 체크 로직
-        if !isTimeInRange(start: pref.startTime, end: pref.endTime) {
-            print("알림 건너뜀.")
-            completion(true)
-            return
-        }
+        // [삭제됨] 여기서 시간을 체크해서 return 하던 로직을 제거했습니다.
+        // 이제 시간과 관계없이 항상 데이터를 조회하고 저장합니다.
         
         let interval = Double(pref.checkIntervalMinutes * 60)
         let threshold = pref.stepThreshold
         let now = Date()
         let startDate = now.addingTimeInterval(-interval)
         
-        // [수정됨] HealthKitManager -> CoreMotionManager 사용
         print("🔍 CoreMotion: \(pref.checkIntervalMinutes)분 전부터 현재까지 걸음 수 조회 시작")
+        
         CoreMotionManager.shared.querySteps(from: startDate, to: now) { steps in
-            print("🚶 측정된 걸음 수: \(steps) / 목표: \(threshold)")
+            print("🚶 구간 측정값: \(steps) (목표: \(threshold))")
+            
+            // 1. 데이터 저장 (24시간 항상 실행됨)
+            pref.bgCheckSteps = steps
+            pref.bgCheckDate = now
+            try? context.save()
+            
+            // 2. 알림 발송 조건 체크 (여기서 시간 체크!)
+            // 걸음 수가 부족하고 + 설정된 알림 시간대일 경우에만 알림 발송
             if steps < threshold {
-                self.sendNotification(steps: steps, threshold: threshold)
+                if self.isTimeInRange(start: pref.startTime, end: pref.endTime) {
+                    self.sendNotification(steps: steps, threshold: threshold)
+                } else {
+                    print("⚠️ 걸음 수 부족하지만 알림 금지 시간대라 조용히 넘어갑니다.")
+                }
             }
+            
             completion(true)
         }
     }
