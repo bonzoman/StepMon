@@ -31,8 +31,8 @@ class UserPreference {
         let startComp = calendar.dateComponents([.hour, .minute], from: startTime)
         let endComp = calendar.dateComponents([.hour, .minute], from: endTime)
         
-        return startComp.hour == 0 && startComp.minute == 0 &&
-               endComp.hour == 0 && endComp.minute == 1
+        return startComp.hour == 0 && startComp.minute == 2 &&
+               endComp.hour == 23 && endComp.minute == 58
     }
     
     init(checkIntervalMinutes: Int = 60,

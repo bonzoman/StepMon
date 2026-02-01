@@ -58,5 +58,6 @@ class CoreMotionManager {
     // 모니터링 중지
     func stopMonitoring() {
         pedometer.stopUpdates()
+        print("🚶‍♂️ CMPedometer 업데이트 중지됨")
     }
 }

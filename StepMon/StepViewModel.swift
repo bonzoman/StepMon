@@ -7,38 +7,57 @@
 
 import SwiftUI
 import WidgetKit
-// HealthKit 제거
 
 @Observable
 class StepViewModel {
     var currentSteps: Int = 0
     
+    // 메모리 보호: 마지막으로 위젯을 업데이트한 걸음 수
+    private var lastSavedSteps: Int = 0
+    
+    // 뷰모델이 메모리에서 해제될 때 센서 모니터링 중지
+    deinit {
+        CoreMotionManager.shared.stopMonitoring()
+        print("🛑 StepViewModel 해제: 센서 모니터링 중지")
+    }
+    
     func startUpdates() {
-        // 오늘 자정부터 현재까지의 걸음 수 추적 시작
         let now = Date()
         let startOfDay = Calendar.current.startOfDay(for: now)
         
         // 실시간 업데이트 시작
         CoreMotionManager.shared.startMonitoring(from: startOfDay) { [weak self] steps in
+            guard let self = self else { return }
+            
             DispatchQueue.main.async {
-                self?.currentSteps = steps
-                self?.updateWidget(steps: steps)
+                // 1. UI용 변수 업데이트 (실시간)
+                self.currentSteps = steps
+                
+                // 2. 무거운 작업(위젯/저장)은 50보 단위로 스로틀링 (메모리 폭주 방지)
+                if abs(steps - self.lastSavedSteps) >= 50 {
+                    self.updateWidget(steps: steps)
+                    self.lastSavedSteps = steps
+                    print("💾 위젯 데이터 저장 및 갱신 (걸음수: \(steps))")
+                }
             }
         }
     }
     
-    // 앱이 포그라운드로 돌아올 때 호출 (혹은 명시적 새로고침)
     func fetchTodaySteps() {
         let now = Date()
         let startOfDay = Calendar.current.startOfDay(for: now)
         
         CoreMotionManager.shared.querySteps(from: startOfDay, to: now) { [weak self] steps in
+            guard let self = self else { return }
+            
             DispatchQueue.main.async {
-                self?.currentSteps = steps
-                self?.updateWidget(steps: steps)
+                self.currentSteps = steps
+                // 앱 진입 시에는 즉시 한 번 위젯 갱신
+                self.updateWidget(steps: steps)
+                self.lastSavedSteps = steps
                 
-                // 쿼리 후에도 실시간 감지를 계속 유지하기 위해 재호출 가능
-                self?.startUpdates()
+                // 실시간 감지 시작
+                self.startUpdates()
             }
         }
     }
@@ -46,13 +65,8 @@ class StepViewModel {
     private func updateWidget(steps: Int) {
         if let sharedDefaults = UserDefaults(suiteName: "group.com.bnz.StepMon") {
             sharedDefaults.set(steps, forKey: "widgetSteps")
-            sharedDefaults.synchronize()
+            // WidgetCenter 호출은 시스템 자원을 많이 소모하므로 꼭 필요한 때만 실행
             WidgetCenter.shared.reloadAllTimelines()
         }
-    }
-    
-    // 뷰모델이 해제될 때 센서 중지 (선택 사항)
-    deinit {
-        CoreMotionManager.shared.stopMonitoring()
     }
 }
