@@ -5,6 +5,11 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Query private var preferences: [UserPreference]
     
+    // [추가] 히스토리 테이블의 최신 레코드 1개를 감시하는 쿼리
+    // 데이터가 쌓이는 즉시 메인 화면이 갱신되도록 합니다.
+    @Query(sort: \NotificationHistory.timestamp, order: .reverse)
+    private var histories: [NotificationHistory]
+    
     @State private var viewModel = StepViewModel()
     @State private var showSettings = false
     
@@ -91,13 +96,14 @@ struct ContentView: View {
                                     VStack(alignment: .trailing, spacing: 2) {
                                         Text("알림 체크 (SuperUser)")
                                             .font(.caption2)
-                                            .foregroundStyle(.orange) // 슈퍼유저 전용임을 나타내기 위해 색상 강조
+                                            .foregroundStyle(.orange)
                                         
                                         HStack(spacing: 4) {
-                                            Text("\(pref.bgCheckSteps)")
+                                            // [핵심 변경] pref.bgCheckSteps 대신 히스토리의 가장 최신 값을 표시
+                                            Text("\(histories.first?.steps ?? 0)")
                                                 .fontWeight(.bold)
                                             Text("•")
-                                            Text(timeFormatter.string(from: pref.bgCheckDate))
+                                            Text(histories.first?.timestamp.formatted(date: .omitted, time: .shortened) ?? "--:--")
                                             
                                             Image(systemName: "chevron.right")
                                                 .font(.system(size: 8, weight: .bold))

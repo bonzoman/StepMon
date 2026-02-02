@@ -7,6 +7,7 @@ import CoreMotion
 class BackgroundStepManager {
     static let shared = BackgroundStepManager()
     let taskId = "bnz.stepmon.stepcheck.refresh"
+    private let lastScheduledKey = "bnz.stepmon.lastScheduledDate" // 예약 시간 저장용 키
     
     private let center = UNUserNotificationCenter.current()
     var modelContainer: ModelContainer?
@@ -21,19 +22,32 @@ class BackgroundStepManager {
         }
     }
     
-    func scheduleAppRefresh() {
+    // [수정] 중복 예약 방지 로직이 추가된 스케줄링 함수
+    func scheduleAppRefresh(force: Bool = false) {
+        // 1. 이미 예약된 시간이 미래에 있다면 건너뜀 (밀림 방지)
+        if !force {
+            if let lastDate = UserDefaults.standard.object(forKey: lastScheduledKey) as? Date,
+               lastDate > Date() {
+                print("⏳ 이미 예약된 작업이 있습니다: \(lastDate.formatted(date: .omitted, time: .shortened))")
+                return
+            }
+        }
+        
+        let nextDate = Date(timeIntervalSinceNow: 15 * 60)
         let request = BGAppRefreshTaskRequest(identifier: taskId)
-        request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
+        // [유지] 체크는 15분마다 최대한 자주 수행
+        request.earliestBeginDate = nextDate
         
         do {
             try BGTaskScheduler.shared.submit(request)
-            print("백그라운드 스케줄링 완료")
+            // 2. 예약 성공 시 해당 시간을 저장
+            UserDefaults.standard.set(nextDate, forKey: lastScheduledKey)
+            print("✅ 차기 체크 예약 완료: \(nextDate.formatted(date: .omitted, time: .shortened))")
         } catch {
-            print("스케줄링 실패: \(error)")
+            print("❌ 스케줄링 실패: \(error)")
         }
     }
     
-    // [수정된 함수 1]
     private func handleAppRefresh(task: BGAppRefreshTask) {
         task.expirationHandler = {
             task.setTaskCompleted(success: false)
@@ -42,11 +56,11 @@ class BackgroundStepManager {
         checkStepsAndNotify { success in
             task.setTaskCompleted(success: success)
             // 성공/실패 여부와 관계없이 다음 스케줄링 등록
-            self.scheduleAppRefresh()
+            // [수정] 백그라운드 작업 완료 후에는 'force: true'로 무조건 다음 릴레이 예약
+            self.scheduleAppRefresh(force: true)
         }
     }
     
-    // [수정된 함수 2] - 히스토리 저장 및 100개 유지 로직 통합
     private func checkStepsAndNotify(completion: @escaping (Bool) -> Void) {
         guard let container = modelContainer else {
             completion(false)
@@ -60,6 +74,7 @@ class BackgroundStepManager {
             return
         }
         
+        // 집계 범위(startDate) 계산
         let interval = Double(readPref.checkIntervalMinutes * 60)
         let threshold = readPref.stepThreshold
         let startTime = readPref.startTime
@@ -70,29 +85,27 @@ class BackgroundStepManager {
         print("🔍 CoreMotion: 조회 시작 (\(startDate.formatted(date: .omitted, time: .shortened)) ~ \(now.formatted(date: .omitted, time: .shortened)))")
         
         CoreMotionManager.shared.querySteps(from: startDate, to: now) { steps in
-            print("🚶 측정된 걸음 수: \(steps)")
-            
             Task { @MainActor in
                 let writeContext = ModelContext(container)
                 if let writePref = try? writeContext.fetch(descriptor).first {
                     
-                    // 1. 기본 백그라운드 데이터 업데이트
                     writePref.bgCheckSteps = steps
                     writePref.bgCheckDate = now
                     
-                    // 2. 히스토리 기록 (NotificationHistory 모델 활용)
                     let isTimeValid = self.isTimeInRange(start: startTime, end: endTime)
                     let shouldNotify = steps < threshold && isTimeValid
                     
+                    // 히스토리 기록
                     let history = NotificationHistory(
                         timestamp: now,
                         steps: steps,
                         threshold: threshold,
-                        isNotified: shouldNotify
+                        isNotified: shouldNotify,
+                        intervalMinutes: readPref.checkIntervalMinutes // [수정] 현재 설정값을 기록에 고정
                     )
                     writeContext.insert(history)
                     
-                    // 3. 최신 100개 유지 로직 (Pruning)
+                    // 100개 유지 Pruning
                     let historyFetch = FetchDescriptor<NotificationHistory>(sortBy: [SortDescriptor(\.timestamp, order: .reverse)])
                     if let allHistory = try? writeContext.fetch(historyFetch), allHistory.count > 100 {
                         for i in 100..<allHistory.count {
@@ -100,7 +113,6 @@ class BackgroundStepManager {
                         }
                     }
                     
-                    // 4. DB 저장 시도
                     do {
                         try writeContext.save()
                         print("✅ DB 저장 및 히스토리 기록 성공: \(steps)보")
@@ -108,11 +120,8 @@ class BackgroundStepManager {
                         print("❌ DB 저장 실패: \(error)")
                     }
                     
-                    // 5. 실제 알림 발송
                     if shouldNotify {
                         self.sendNotification(steps: steps, threshold: threshold)
-                    } else if steps < threshold && !isTimeValid {
-                        print("⚠️ 알림 조건은 충족하나 알림 금지 시간대임")
                     }
                 }
                 completion(true)

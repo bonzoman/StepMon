@@ -68,11 +68,13 @@ class NotificationHistory {
     var steps: Int
     var threshold: Int
     var isNotified: Bool
+    var intervalMinutes: Int // [추가] 기록 시점의 집계 범위(분) 저장
     
-    init(timestamp: Date, steps: Int, threshold: Int, isNotified: Bool) {
+    init(timestamp: Date, steps: Int, threshold: Int, isNotified: Bool, intervalMinutes: Int) {
         self.timestamp = timestamp
         self.steps = steps
         self.threshold = threshold
         self.isNotified = isNotified
+        self.intervalMinutes = intervalMinutes
     }
 }
