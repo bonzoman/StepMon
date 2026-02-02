@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0B3B63EC2F2F742800D38E18 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 0B3B63EB2F2F742800D38E18 /* Localizable.xcstrings */; };
+		0B3B63ED2F2F742800D38E18 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 0B3B63EB2F2F742800D38E18 /* Localizable.xcstrings */; };
+		0B3B63EE2F2F742800D38E18 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 0B3B63EB2F2F742800D38E18 /* Localizable.xcstrings */; };
+		0B3B63EF2F2F742800D38E18 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 0B3B63EB2F2F742800D38E18 /* Localizable.xcstrings */; };
 		0B433B212F27B1FA005A42E4 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B433B202F27B1FA005A42E4 /* WidgetKit.framework */; };
 		0B433B232F27B1FA005A42E4 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B433B222F27B1FA005A42E4 /* SwiftUI.framework */; };
 		0B433B342F27B1FB005A42E4 /* StepMonWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0B433B1E2F27B1FA005A42E4 /* StepMonWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -51,6 +55,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0B3B63EB2F2F742800D38E18 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		0B433B1E2F27B1FA005A42E4 /* StepMonWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = StepMonWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		0B433B202F27B1FA005A42E4 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		0B433B222F27B1FA005A42E4 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -152,6 +157,7 @@
 		0BBA62142F24F1AD00301AAE = {
 			isa = PBXGroup;
 			children = (
+				0B3B63EB2F2F742800D38E18 /* Localizable.xcstrings */,
 				0B433B3A2F27B289005A42E4 /* StepMonWidgetExtension.entitlements */,
 				0BBA621F2F24F1AD00301AAE /* StepMon */,
 				0BBA622F2F24F1AE00301AAE /* StepMonTests */,
@@ -300,6 +306,8 @@
 			knownRegions = (
 				en,
 				Base,
+				ja,
+				ko,
 			);
 			mainGroup = 0BBA62142F24F1AD00301AAE;
 			minimizedProjectReferenceProxies = 1;
@@ -321,6 +329,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0B3B63EF2F2F742800D38E18 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -328,6 +337,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0B3B63EC2F2F742800D38E18 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -335,6 +345,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0B3B63ED2F2F742800D38E18 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -342,6 +353,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0B3B63EE2F2F742800D38E18 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -518,6 +530,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
@@ -574,6 +587,7 @@
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;

@@ -33,6 +33,7 @@ class BackgroundStepManager {
         }
     }
     
+    // [수정된 함수 1]
     private func handleAppRefresh(task: BGAppRefreshTask) {
         task.expirationHandler = {
             task.setTaskCompleted(success: false)
@@ -40,55 +41,85 @@ class BackgroundStepManager {
         
         checkStepsAndNotify { success in
             task.setTaskCompleted(success: success)
+            // 성공/실패 여부와 관계없이 다음 스케줄링 등록
             self.scheduleAppRefresh()
         }
     }
     
+    // [수정된 함수 2] - 히스토리 저장 및 100개 유지 로직 통합
     private func checkStepsAndNotify(completion: @escaping (Bool) -> Void) {
         guard let container = modelContainer else {
             completion(false)
             return
         }
         
-        let context = ModelContext(container)
+        let readContext = ModelContext(container)
         let descriptor = FetchDescriptor<UserPreference>()
-        
-        guard let pref = try? context.fetch(descriptor).first else {
+        guard let readPref = try? readContext.fetch(descriptor).first else {
             completion(true)
             return
         }
         
-        // [삭제됨] 여기서 시간을 체크해서 return 하던 로직을 제거했습니다.
-        // 이제 시간과 관계없이 항상 데이터를 조회하고 저장합니다.
-        
-        let interval = Double(pref.checkIntervalMinutes * 60)
-        let threshold = pref.stepThreshold
+        let interval = Double(readPref.checkIntervalMinutes * 60)
+        let threshold = readPref.stepThreshold
+        let startTime = readPref.startTime
+        let endTime = readPref.endTime
         let now = Date()
         let startDate = now.addingTimeInterval(-interval)
         
-        print("🔍 CoreMotion: \(pref.checkIntervalMinutes)분 전부터 현재까지 걸음 수 조회 시작")
+        print("🔍 CoreMotion: 조회 시작 (\(startDate.formatted(date: .omitted, time: .shortened)) ~ \(now.formatted(date: .omitted, time: .shortened)))")
         
         CoreMotionManager.shared.querySteps(from: startDate, to: now) { steps in
-            print("🚶 구간 측정값: \(steps) (목표: \(threshold))")
+            print("🚶 측정된 걸음 수: \(steps)")
             
-            // 1. 데이터 저장 (24시간 항상 실행됨)
-            pref.bgCheckSteps = steps
-            pref.bgCheckDate = now
-            try? context.save()
-            
-            // 2. 알림 발송 조건 체크 (여기서 시간 체크!)
-            // 걸음 수가 부족하고 + 설정된 알림 시간대일 경우에만 알림 발송
-            if steps < threshold {
-                if self.isTimeInRange(start: pref.startTime, end: pref.endTime) {
-                    self.sendNotification(steps: steps, threshold: threshold)
-                } else {
-                    print("⚠️ 걸음 수 부족하지만 알림 금지 시간대라 조용히 넘어갑니다.")
+            Task { @MainActor in
+                let writeContext = ModelContext(container)
+                if let writePref = try? writeContext.fetch(descriptor).first {
+                    
+                    // 1. 기본 백그라운드 데이터 업데이트
+                    writePref.bgCheckSteps = steps
+                    writePref.bgCheckDate = now
+                    
+                    // 2. 히스토리 기록 (NotificationHistory 모델 활용)
+                    let isTimeValid = self.isTimeInRange(start: startTime, end: endTime)
+                    let shouldNotify = steps < threshold && isTimeValid
+                    
+                    let history = NotificationHistory(
+                        timestamp: now,
+                        steps: steps,
+                        threshold: threshold,
+                        isNotified: shouldNotify
+                    )
+                    writeContext.insert(history)
+                    
+                    // 3. 최신 100개 유지 로직 (Pruning)
+                    let historyFetch = FetchDescriptor<NotificationHistory>(sortBy: [SortDescriptor(\.timestamp, order: .reverse)])
+                    if let allHistory = try? writeContext.fetch(historyFetch), allHistory.count > 100 {
+                        for i in 100..<allHistory.count {
+                            writeContext.delete(allHistory[i])
+                        }
+                    }
+                    
+                    // 4. DB 저장 시도
+                    do {
+                        try writeContext.save()
+                        print("✅ DB 저장 및 히스토리 기록 성공: \(steps)보")
+                    } catch {
+                        print("❌ DB 저장 실패: \(error)")
+                    }
+                    
+                    // 5. 실제 알림 발송
+                    if shouldNotify {
+                        self.sendNotification(steps: steps, threshold: threshold)
+                    } else if steps < threshold && !isTimeValid {
+                        print("⚠️ 알림 조건은 충족하나 알림 금지 시간대임")
+                    }
                 }
+                completion(true)
             }
-            
-            completion(true)
         }
     }
+    
     
     private func isTimeInRange(start: Date, end: Date) -> Bool {
         let calendar = Calendar.current

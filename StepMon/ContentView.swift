@@ -85,24 +85,33 @@ struct ContentView: View {
                             
                             Spacer()
                             
-                            // [우측/수정됨] 백그라운드 체크 정보 (구간 걸음 수)
-                            if let pref = preferences.first {
-                                VStack(alignment: .trailing, spacing: 2) {
-                                    Text("알림 체크") // 제목 변경
-                                        .font(.caption2)
-                                        .foregroundStyle(.black.opacity(0.5))
-                                    
-                                    HStack(spacing: 4) {
-                                        // 여기 표시되는 값이 알림에 떴던 그 값(구간 걸음 수)입니다.
-                                        Text("\(pref.bgCheckSteps)보")
-                                            .fontWeight(.bold)
-                                        Text("•")
-                                        Text(timeFormatter.string(from: pref.bgCheckDate))
+                            // [수정됨] 슈퍼유저인 경우에만 알림 체크 영역 노출
+                            if let pref = preferences.first, pref.isSuperUser {
+                                NavigationLink(destination: NotificationHistoryView()) {
+                                    VStack(alignment: .trailing, spacing: 2) {
+                                        Text("알림 체크 (SuperUser)")
+                                            .font(.caption2)
+                                            .foregroundStyle(.orange) // 슈퍼유저 전용임을 나타내기 위해 색상 강조
+                                        
+                                        HStack(spacing: 4) {
+                                            Text("\(pref.bgCheckSteps)")
+                                                .fontWeight(.bold)
+                                            Text("•")
+                                            Text(timeFormatter.string(from: pref.bgCheckDate))
+                                            
+                                            Image(systemName: "chevron.right")
+                                                .font(.system(size: 8, weight: .bold))
+                                                .foregroundStyle(.black.opacity(0.3))
+                                        }
+                                        .font(.caption)
+                                        .monospacedDigit()
+                                        .foregroundStyle(.black.opacity(0.7))
                                     }
-                                    .font(.caption)
-                                    .monospacedDigit()
-                                    .foregroundStyle(.black.opacity(0.7))
+                                    .padding(.vertical, 4)
+                                    .padding(.leading, 8)
+                                    .contentShape(Rectangle())
                                 }
+                                .buttonStyle(.plain)
                                 .padding(.bottom, 8)
                             }
                         }

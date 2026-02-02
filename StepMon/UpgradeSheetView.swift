@@ -42,7 +42,7 @@ struct UpgradeSheetView: View {
                     // 1. 만보기 나무
                     let treeCost = getCost(level: pref.treeLevel)
                     UpgradeRow(
-                        title: "만보기 나무",
+                        title: String(localized: "만보기 나무"),
                         level: pref.treeLevel,
                         imageName: GameResourceManager.getMainTreeImage(level: pref.treeLevel),
                         buttonColor: .green,
@@ -52,10 +52,10 @@ struct UpgradeSheetView: View {
                         invest(target: .tree, totalCost: treeCost)
                     }
                     
-                    // 2. 비트몬 일꾼
+                    // 2. 스텝몬 일꾼
                     let workerCost = getCost(level: pref.workerLevel)
                     UpgradeRow(
-                        title: "비트몬 일꾼",
+                        title: String(localized: "스텝몬 일꾼"),
                         level: pref.workerLevel,
                         imageName: GameResourceManager.getMainWorkerImage(level: pref.workerLevel),
                         buttonColor: .blue,

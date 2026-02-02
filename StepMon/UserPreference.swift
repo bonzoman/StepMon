@@ -61,3 +61,18 @@ class UserPreference {
         self.bgCheckDate = Date()
     }
 }
+
+@Model
+class NotificationHistory {
+    var timestamp: Date
+    var steps: Int
+    var threshold: Int
+    var isNotified: Bool
+    
+    init(timestamp: Date, steps: Int, threshold: Int, isNotified: Bool) {
+        self.timestamp = timestamp
+        self.steps = steps
+        self.threshold = threshold
+        self.isNotified = isNotified
+    }
+}
