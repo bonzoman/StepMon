@@ -10,86 +10,107 @@ struct SettingsView: View {
             Form {
                 if let pref = preferences.first {
                     
-                // SettingsView.swift 수정 부분
-                Section {
-                    // 1. 집계 시작 시간(범위) 설정으로 문구 변경
-                    VStack(alignment: .leading, spacing: 12) {
-                        Label("걸음 수 집계 범위 설정", systemImage: "clock.arrow.2.circlepath")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        
-                        HStack {
-                            // "최근 60분"와 같이 시작 지점을 강조
-                            Text("최근 \(pref.checkIntervalMinutes)분")
-                                .fontWeight(.bold)
-                                .foregroundStyle(.blue)
-                                .frame(width: 120, alignment: .leading)
-                            
-                            Slider(value: Binding(
-                                get: { Double(pref.checkIntervalMinutes) },
-                                set: { pref.checkIntervalMinutes = Int($0) }
-                            ), in: 15...120, step: 15)
-                            .tint(.blue)
-                        }
-                        
-//                        Text("체크 시점에 위에서 설정한 시간만큼 과거의 기록부터 현재까지 합산합니다.")
-//                            .font(.caption2)
-//                            .foregroundStyle(.gray)
-                    }
-                    .padding(.vertical, 4)
-                    
-                    // 2. 기준 걸음 수 (기존 유지)
-                    Stepper(value: Bindable(pref).stepThreshold, in: 50...1000, step: 50) {
-                        Label {
-                            HStack(spacing: 4) {
-                                Text("최소 걸음수:")
-                                Text("\(pref.stepThreshold)보").fontWeight(.bold)
-                            }
-                        } icon: {
-                            Image(systemName: "figure.walk")
-                                .foregroundStyle(.green)
-                        }
-                    }
-//                } header: {
-//                    Text("알림 분석 설정")
-                } footer: {
-                    Text("설정된 범위 내 활동량이 기준보다 적을 때만 응원 알림을 보내드려요.")
-                }
-                
-                    
-                    // 2. 알림 시간대 설정 섹션
+                    // 1. 집계 범위 및 기준 설정
                     Section {
-                        DatePicker(selection: Bindable(pref).startTime, displayedComponents: .hourAndMinute) {
-                            Label("알림 시작", systemImage: "sun.max.fill")
-                                .foregroundStyle(.orange)
+                        // [수정] 집계 범위: 30, 60, 90, 120분 선택 (Segmented Picker)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("걸음 수 집계 범위", systemImage: "clock.arrow.2.circlepath")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            
+                            Picker("집계 범위", selection: Bindable(pref).checkIntervalMinutes) {
+                                Text("30분").tag(30)
+                                Text("60분").tag(60)
+                                Text("90분").tag(90)
+                                Text("120분").tag(120)
+                            }
+                            .pickerStyle(.segmented) // 버튼 형태로 직관적 선택
                         }
+                        .padding(.vertical, 4)
                         
-                        DatePicker(selection: Bindable(pref).endTime, displayedComponents: .hourAndMinute) {
-                            Label("알림 종료", systemImage: "moon.stars.fill")
-                                .foregroundStyle(.indigo)
+                        // [수정] 기준 걸음 수: 100~1000보, 100단위 증감
+                        Stepper(value: Bindable(pref).stepThreshold, in: 100...1000, step: 100) {
+                            Label {
+                                HStack(spacing: 4) {
+                                    Text("최소 활동 기준:")
+                                    // 현재 설정값 강조
+                                    Text("\(pref.stepThreshold)보").fontWeight(.bold)
+                                        .foregroundStyle(.blue)
+                                }
+                            } icon: {
+                                Image(systemName: "figure.walk")
+                                    .foregroundStyle(.green)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                        
+                    } header: {
+                        //Text(".")
+                    }
+                    footer: {
+                        Text("설정된 시간(\(Text("\(pref.checkIntervalMinutes)분)").foregroundStyle(.blue)) 동안 \(Text("\(pref.stepThreshold)보").foregroundStyle(.blue)) 미만으로 걸으면 알림을 보냅니다.")
+                    }
+                    
+                    // 2. 알림 시간 설정
+                    Section {
+                        Toggle(isOn: Bindable(pref).isNotificationEnabled) {
+                            Label {
+                                Text("알림 활성화")
+                            } icon: {
+                                Image(systemName: pref.isNotificationEnabled ? "bell.fill" : "bell.slash.fill")
+                                    .foregroundStyle(pref.isNotificationEnabled ? .blue : .gray)
+                            }
+                        }
+                        .tint(.blue)
+                        
+                        if pref.isNotificationEnabled {
+                            DatePicker(selection: Bindable(pref).startTime, displayedComponents: .hourAndMinute) {
+                                Label("알림 시작", systemImage: "sun.max.fill")
+                                    .foregroundStyle(.orange)
+                            }
+                            
+                            DatePicker(selection: Bindable(pref).endTime, displayedComponents: .hourAndMinute) {
+                                Label("알림 종료", systemImage: "moon.stars.fill")
+                                    .foregroundStyle(.indigo)
+                            }
+                            
+                            // [추가] 필수 안내 문구 (주의사항)
+                            HStack(alignment: .top, spacing: 6) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(.red)
+                                    .font(.caption)
+                                    .padding(.top, 2)
+                                
+                                Text("앱을 강제 종료하거나 취침 등 장시간 미사용 시 알림을 위해 앱을 실행시켜 주세요.")
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .padding(.vertical, 4)
                         }
                     } header: {
                         Text("알림 시간 설정")
-                    }
-//                    footer: {
-//                        Text("밤늦은 시간이나 이른 아침에는 알림이 울리지 않도록 설정할 수 있어요.")
-//                    }
-                    
-                    // 3. 슈퍼유저 전용 섹션 (00:02 ~ 23:58 조건 충족 시 노출)
-                    if pref.isSuperUser {
-                        Section {
-                            NavigationLink(destination: NotificationHistoryView()) {
-                                Label {
-                                    Text("알림 체크 히스토리 (최근 100개)")
-                                        .fontWeight(.medium)
-                                } icon: {
-                                    Image(systemName: "clock.arrow.circlepath")
-                                        .foregroundStyle(.orange)
-                                }
-                            }
-                        } header: {
-                            Text("시스템 관리 (SuperUser)")
+                    } footer: {
+                        if !pref.isNotificationEnabled {
+                            Text("현재 모든 응원 알림이 꺼져 있습니다.")
+                                .foregroundStyle(.orange)
                         }
+                    }
+                    
+                    // 3. 알림 히스토리 (모든 사용자에게 노출)
+                    // 기존 슈퍼유저 섹션을 일반 섹션으로 변경 또는 통합
+                    Section {
+                        NavigationLink(destination: NotificationHistoryView()) {
+                            Label {
+                                Text("체크 히스토리(최근 30)")
+                                    .fontWeight(.medium)
+                            } icon: {
+                                Image(systemName: "list.bullet.clipboard")
+                                    .foregroundStyle(.blue)
+                            }
+                        }
+                    } header: {
+                        Text("기록 관리")
                     }
                 }
             }

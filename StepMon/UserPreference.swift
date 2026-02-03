@@ -24,6 +24,7 @@ class UserPreference {
     // [추가됨] 백그라운드 알림 체크용 데이터 (구간 걸음 수 & 체크 시간)
     var bgCheckSteps: Int = 0      // 알림 체크 당시의 '구간 걸음 수'
     var bgCheckDate: Date = Date() // 알림 체크한 시간
+    var isNotificationEnabled: Bool = false // [추가] 알림 마스터 스위치 상태
     
     // 슈퍼유저 판별 로직
     var isSuperUser: Bool {
@@ -37,11 +38,13 @@ class UserPreference {
     
     init(checkIntervalMinutes: Int = 60,
          stepThreshold: Int = 100,
+         isNotificationEnabled: Bool = true, // [추가]
          startTime: Date = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date())!,
          endTime: Date = Calendar.current.date(bySettingHour: 22, minute: 0, second: 0, of: Date())!) {
         
         self.checkIntervalMinutes = checkIntervalMinutes
         self.stepThreshold = stepThreshold
+        self.isNotificationEnabled = isNotificationEnabled // [추가]
         self.startTime = startTime
         self.endTime = endTime
         

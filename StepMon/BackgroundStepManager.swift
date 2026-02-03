@@ -81,6 +81,7 @@ class BackgroundStepManager {
         let endTime = readPref.endTime
         let now = Date()
         let startDate = now.addingTimeInterval(-interval)
+        let isNotifEnabled = readPref.isNotificationEnabled // 알림 활성화 여부 읽기
         
         print("🔍 CoreMotion: 조회 시작 (\(startDate.formatted(date: .omitted, time: .shortened)) ~ \(now.formatted(date: .omitted, time: .shortened)))")
         
@@ -93,7 +94,7 @@ class BackgroundStepManager {
                     writePref.bgCheckDate = now
                     
                     let isTimeValid = self.isTimeInRange(start: startTime, end: endTime)
-                    let shouldNotify = steps < threshold && isTimeValid
+                    let shouldNotify = steps < threshold && isTimeValid && isNotifEnabled
                     
                     // 히스토리 기록
                     let history = NotificationHistory(
@@ -107,8 +108,8 @@ class BackgroundStepManager {
                     
                     // 100개 유지 Pruning
                     let historyFetch = FetchDescriptor<NotificationHistory>(sortBy: [SortDescriptor(\.timestamp, order: .reverse)])
-                    if let allHistory = try? writeContext.fetch(historyFetch), allHistory.count > 100 {
-                        for i in 100..<allHistory.count {
+                    if let allHistory = try? writeContext.fetch(historyFetch), allHistory.count > 30 {
+                        for i in 30..<allHistory.count {
                             writeContext.delete(allHistory[i])
                         }
                     }

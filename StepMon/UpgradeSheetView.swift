@@ -1,24 +1,34 @@
 import SwiftUI
 import SwiftData
-import UIKit // Haptic 피드백을 위해 필요
+import UIKit
 
 struct UpgradeSheetView: View {
     @Environment(\.dismiss) var dismiss
     @Bindable var pref: UserPreference
     
+    // 상태에 따른 안내 문구 로직
+    var statusMessage: String {
+        if pref.isSuperUser {
+            return "슈퍼유저 모드: 생명수 소모 없이 즉시 레벨업"
+        } else if pref.lifeWater >= 10 {
+            return "버튼을 눌러 생명수를 주입하세요."
+        } else {
+            return "생명수가 부족해요. 열심히 걷고 오세요!"
+        }
+    }
+    
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 20) { // 전체 간격 25 -> 20으로 축소
+                VStack(spacing: 20) {
                     
-                    // [상단] 보유 생명수 + 안내 문구 (통합 및 축소)
-                    VStack(spacing: 5) { // 내부 간격 타이트하게
+                    VStack(spacing: 5) {
                         Text("💧 보유 생명수")
                             .font(.subheadline)
                             .foregroundStyle(.gray)
                         
                         Text("\(pref.lifeWater)")
-                            .font(.system(size: 36, weight: .black, design: .rounded)) // 폰트 40 -> 36 축소
+                            .font(.system(size: 36, weight: .black, design: .rounded))
                             .foregroundStyle(.blue)
                             .contentTransition(.numericText())
                         
@@ -29,13 +39,13 @@ struct UpgradeSheetView: View {
                                 .foregroundStyle(.orange)
                         }
                         
-                        // [이동됨] 하단에 있던 안내 문구를 여기로 배치
-                        Text(pref.isSuperUser ? "슈퍼유저 모드: 생명수 소모 없이 즉시 레벨업" : "버튼을 눌러 생명수를 주입하세요 (1회당 10)")
+                        Text(statusMessage)
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                             // 생명수가 부족하면 빨간색으로 경고, 아니면 회색
+                            .foregroundStyle((!pref.isSuperUser && pref.lifeWater < 10) ? .red : .secondary)
                             .padding(.top, 5)
                     }
-                    .padding(.top, 10) // 상단 여백 축소
+                    .padding(.top, 10)
                     
                     Divider()
                     
@@ -65,18 +75,18 @@ struct UpgradeSheetView: View {
                         invest(target: .worker, totalCost: workerCost)
                     }
                     
-                    // 일꾼 효율 설명 (심플 버전)
+                    // 일꾼 효율 설명
                     HStack {
                         Image(systemName: "lightbulb.fill")
                             .foregroundStyle(.orange)
                             .font(.caption)
-                        Text("일꾼 레벨이 오르면 걸음당 생명수 획득 효율이 증가합니다.")
+                        Text("일꾼 레벨이 오르면 생명수 획득 효율이 증가합니다.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Spacer()
                     }
                     .padding(.horizontal)
-                    .padding(.bottom, 20) // 하단 여백 확보
+                    .padding(.bottom, 20)
                 }
                 .padding()
             }
@@ -145,6 +155,9 @@ struct UpgradeSheetView: View {
             .buttonStyle(.borderedProminent)
             .tint(buttonColor)
             .disabled(!pref.isSuperUser && pref.lifeWater < 10)
+            
+
+
         }
         .padding()
         .background(Color(uiColor: .secondarySystemGroupedBackground))

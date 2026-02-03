@@ -12,6 +12,9 @@ struct ContentView: View {
     
     @State private var viewModel = StepViewModel()
     @State private var showSettings = false
+    // [1] 상태 변수 추가 (struct ContentView 상단)
+    @State private var effectScale: CGFloat = 1.0 // 텍스트 크기 애니메이션용
+    @State private var showSplash: Bool = false   // 파티클(물방울) 효과 트리거
     
     let targetStepsForBackground: Double = 10000.0
     
@@ -90,13 +93,12 @@ struct ContentView: View {
                             
                             Spacer()
                             
-                            // [수정됨] 슈퍼유저인 경우에만 알림 체크 영역 노출
-                            if let pref = preferences.first, pref.isSuperUser {
+                            if let pref = preferences.first {
                                 NavigationLink(destination: NotificationHistoryView()) {
                                     VStack(alignment: .trailing, spacing: 2) {
-                                        Text("알림 체크 (SuperUser)")
+                                        Text("알림 체크")
                                             .font(.caption2)
-                                            .foregroundStyle(.orange)
+                                            .foregroundStyle(.black.opacity(0.5))
                                         
                                         HStack(spacing: 4) {
                                             // [핵심 변경] pref.bgCheckSteps 대신 히스토리의 가장 최신 값을 표시
@@ -143,20 +145,72 @@ struct ContentView: View {
                         .padding(.horizontal, 20)
                     }
                     
-                    // 2. 게임 정보 및 풍경
+//                    if let pref = preferences.first {
+//                        VStack(spacing: 5) {
+//                            HStack {
+//                                Image(systemName: "drop.fill")
+//                                    .foregroundStyle(.blue)
+//                                Text("\(pref.lifeWater)")
+//                                    .font(.system(size: 24, weight: .bold, design: .rounded))
+//                                    .contentTransition(.numericText())
+//                                Text("생명수")
+//                                    .font(.caption)
+//                                    .foregroundStyle(.gray)
+//                            }
+//                            
+//                            HStack {
+//                                Text("오늘 획득: \(pref.dailyEarnedWater) / \(maxDailyWater)")
+//                                    .font(.caption2)
+//                                    .foregroundStyle(.secondary)
+//                                
+//                                ProgressView(value: Double(pref.dailyEarnedWater), total: Double(maxDailyWater))
+//                                    .progressViewStyle(.linear)
+//                                    .frame(width: 100)
+//                                    .tint(pref.isSuperUser ? .orange : .blue)
+//                            }
+//                        }
+//                        .padding(.vertical, 10)
+//                        .padding(.horizontal, 25)
+//                        .background(.regularMaterial)
+//                        .clipShape(Capsule())
+//                        
+//                        GardenView(pref: pref)
+//                        
+//                    } else {
+//                        ProgressView().padding()
+//                    }
+                    
                     if let pref = preferences.first {
                         VStack(spacing: 5) {
-                            HStack {
-                                Image(systemName: "drop.fill")
-                                    .foregroundStyle(.blue)
-                                Text("\(pref.lifeWater)")
-                                    .font(.system(size: 24, weight: .bold, design: .rounded))
-                                    .contentTransition(.numericText())
-                                Text("생명수")
-                                    .font(.caption)
-                                    .foregroundStyle(.gray)
+                            
+                            // [수정] 생명수 표시 영역 (터치 및 이펙트 적용)
+                            ZStack {
+                                // 대박 터질 때 파티클 효과 (뒤쪽 레이어)
+                                if showSplash {
+                                    SplashEffectView()
+                                        .allowsHitTesting(false) // 이펙트가 터치를 가리지 않게 함
+                                }
+                                
+                                HStack {
+                                    Image(systemName: "drop.fill")
+                                        .foregroundStyle(.blue)
+                                        .symbolEffect(.bounce, value: effectScale) // (iOS 17+) 아이콘 튕김
+                                    
+                                    Text("\(pref.lifeWater)")
+                                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                                        .contentTransition(.numericText())
+                                    
+                                    Text("생명수")
+                                        .font(.caption)
+                                        .foregroundStyle(.gray)
+                                }
+                            }
+                            .scaleEffect(effectScale) // 텍스트 크기 애니메이션
+                            .onTapGesture {
+                                triggerLifeWaterEffect() // 터치 시 로직 실행
                             }
                             
+                            // [유지] 하단 게이지바
                             HStack {
                                 Text("오늘 획득: \(pref.dailyEarnedWater) / \(maxDailyWater)")
                                     .font(.caption2)
@@ -178,6 +232,7 @@ struct ContentView: View {
                     } else {
                         ProgressView().padding()
                     }
+                    
                     
                     Spacer()
                 }
@@ -237,6 +292,67 @@ struct ContentView: View {
             }
         } else if diff < 0 {
             pref.lastCheckedSteps = currentSteps
+        }
+    }
+    
+    // ContentView 내부 하단 func 영역에 추가
+
+    func triggerLifeWaterEffect() {
+        // 10% 확률 계산 (1~10 중 1이 나오면 당첨)
+        let isJackpot = Int.random(in: 1...10) == 1
+        
+        if isJackpot {
+            // 🎉 대박 효과 (팡팡!)
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.success) // 묵직한 진동
+            
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.3)) {
+                effectScale = 1.5 // 확 커졌다가
+            }
+            
+            // 파티클 발사
+            showSplash = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                showSplash = false // 1초 뒤 파티클 제거
+            }
+            
+        } else {
+            // 💧 일반 효과 (소소한 반응)
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred() // 가벼운 톡 진동
+            
+            withAnimation(.spring(response: 0.2, dampingFraction: 0.5)) {
+                effectScale = 1.1 // 살짝 커짐
+            }
+        }
+        
+        // 애니메이션 복귀 (원래 크기로)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                effectScale = 1.0
+            }
+        }
+    }
+    
+    struct SplashEffectView: View {
+        @State private var animate = false
+        
+        var body: some View {
+            ZStack {
+                ForEach(0..<8) { i in
+                    Image(systemName: "drop.fill")
+                        .foregroundStyle(.blue.opacity(0.8))
+                        .font(.system(size: 10)) // 작은 물방울
+                        .offset(y: animate ? -60 : 0) // 위로 튀어오름
+                        .rotationEffect(.degrees(Double(i) * 45)) // 8방향으로 회전
+                        .opacity(animate ? 0 : 1) // 점점 사라짐
+                }
+            }
+            .onAppear {
+                withAnimation(.easeOut(duration: 0.8)) {
+                    animate = true
+                }
+            }
         }
     }
     
