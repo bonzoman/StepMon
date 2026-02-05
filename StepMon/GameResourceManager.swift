@@ -4,7 +4,7 @@ struct GameResourceManager {
     
     // --- [이미지 파일명 반환] ---
     
-    // 나무: 총 23단계 이미지 (main_tree_1 ~ main_tree_23)
+    // 나무: 총 24단계 이미지 (main_tree_1 ~ main_tree_24)
     static func getMainTreeImage(level: Int) -> String {
         let index = getTreeImageIndex(level: level)
         return "main_tree_\(index)"
@@ -21,6 +21,10 @@ struct GameResourceManager {
     
     // Lv 1~29 (10단위) -> Lv 30~59 (5단위) -> Lv 60~100 (3단위)
     static func getTreeImageIndex(level: Int) -> Int {
+        
+        // 만렙 100일 때 24번 이미지 즉시 반환
+        if level >= 100 { return 24 }
+        
         switch level {
         case 0..<30:
             // [구간 1] Lv 1, 11, 21 ... (총 3장)
@@ -33,8 +37,7 @@ struct GameResourceManager {
             return 4 + ((level - 30) / 5)
             
         default:
-            // [구간 3] Lv 60, 63, 66 ... (총 14장)
-            // 인덱스: 10 ~ 23
+            // [구간 3] Lv 60~99 (3단위) -> 10 ~ 23번
             let calculated = 10 + ((level - 60) / 3)
             return min(calculated, 23) // 최대 23번 이미지 고정
         }

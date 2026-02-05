@@ -11,9 +11,13 @@ struct UpgradeSheetView: View {
         if pref.isSuperUser {
             return "슈퍼유저 모드: 생명수 소모 없이 즉시 레벨업"
         } else if pref.lifeWater >= 10 {
+            // [수정] 나무와 일꾼 모두 만렙인 경우 안내 문구 변경
+            if pref.treeLevel >= 100 && pref.workerLevel >= 100 {
+                return "모든 정원 관리가 완료되었습니다!"
+            }
             return "버튼을 눌러 생명수를 주입하세요."
         } else {
-            return "생명수가 부족해요. 열심히 걷고 오세요!"
+            return "생명수가 부족해요!"
         }
     }
     
@@ -54,6 +58,7 @@ struct UpgradeSheetView: View {
                     UpgradeRow(
                         title: String(localized: "만보기 나무"),
                         level: pref.treeLevel,
+                        maxLevel: 100, // [추가] 만렙 기준 전달
                         imageName: GameResourceManager.getMainTreeImage(level: pref.treeLevel),
                         buttonColor: .green,
                         totalCost: treeCost,
@@ -67,6 +72,7 @@ struct UpgradeSheetView: View {
                     UpgradeRow(
                         title: String(localized: "스텝몬 일꾼"),
                         level: pref.workerLevel,
+                        maxLevel: 100, // [추가] 만렙 기준 전달
                         imageName: GameResourceManager.getMainWorkerImage(level: pref.workerLevel),
                         buttonColor: .blue,
                         totalCost: workerCost,
@@ -103,7 +109,10 @@ struct UpgradeSheetView: View {
     
     // UpgradeRow 컴포넌트
     @ViewBuilder
-    func UpgradeRow(title: String, level: Int, imageName: String, buttonColor: Color, totalCost: Int, currentInvest: Int, action: @escaping () -> Void) -> some View {
+    func UpgradeRow(title: String, level: Int, maxLevel: Int, imageName: String, buttonColor: Color, totalCost: Int, currentInvest: Int, action: @escaping () -> Void) -> some View {
+        
+        let isMax = level >= maxLevel // 만렙 여부 확인
+        
         HStack {
             Image(imageName)
                 .resizable()
@@ -117,7 +126,7 @@ struct UpgradeSheetView: View {
                     .foregroundStyle(.primary)
                 
                 HStack {
-                    Text("Lv.\(level)")
+                    Text(isMax ? "MAX" : "Lv.\(level)") // 만렙시 MAX 표시
                         .font(.subheadline)
                         .bold()
                         .foregroundStyle(.secondary)
@@ -128,16 +137,22 @@ struct UpgradeSheetView: View {
                         .foregroundStyle(.gray)
                 }
                 
-                ProgressView(value: Double(currentInvest), total: Double(totalCost))
+                // 만렙이면 게이지를 꽉 채움
+                ProgressView(value: isMax ? 1.0 : Double(currentInvest), total: isMax ? 1.0 : Double(totalCost))
                     .progressViewStyle(.linear)
-                    .tint(buttonColor)
+                    .tint(isMax ? .orange : buttonColor)
             }
             
             Spacer()
             
             Button(action: action) {
                 VStack {
-                    if pref.isSuperUser {
+                    if isMax {
+                        Image(systemName: "checkmark.seal.fill")
+                        Text("완료")
+                            .font(.caption2)
+                            .bold()
+                    } else if pref.isSuperUser {
                         Text("UP")
                             .font(.headline)
                             .bold()
@@ -153,9 +168,8 @@ struct UpgradeSheetView: View {
                 .frame(minWidth: 44)
             }
             .buttonStyle(.borderedProminent)
-            .tint(buttonColor)
-            .disabled(!pref.isSuperUser && pref.lifeWater < 10)
-            
+            .tint(isMax ? .gray : buttonColor) // 만렙시 회색 버튼
+            .disabled(isMax || (!pref.isSuperUser && pref.lifeWater < 10)) // 만렙시 비활성화
 
 
         }
@@ -172,6 +186,10 @@ struct UpgradeSheetView: View {
     enum InvestmentTarget { case tree, worker }
     
     func invest(target: InvestmentTarget, totalCost: Int) {
+        // [추가] 만렙 도달 시 더 이상 투자 불가
+        if target == .tree && pref.treeLevel >= 100 { return }
+        if target == .worker && pref.workerLevel >= 100 { return }
+        
         if pref.isSuperUser {
             if target == .tree {
                 pref.treeLevel += 1

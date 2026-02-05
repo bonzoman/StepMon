@@ -1,6 +1,9 @@
 import SwiftUI
 import SwiftData
 
+
+
+
 struct GardenView: View {
     @Bindable var pref: UserPreference
     
@@ -30,7 +33,7 @@ struct GardenView: View {
                 if treeIndex >= 13 {
                     let growthStep = CGFloat(treeIndex - 13)
                     // availableWidth(화면 너비)를 기준으로 최대 크기 제한
-                    return min(baseWidth + (growthStep * 25), availableWidth * 1.2)
+                    return min(baseWidth + (growthStep * 25), availableWidth * 1.3)
                 } else {
                     return baseWidth
                 }
@@ -44,18 +47,20 @@ struct GardenView: View {
                     GeometryReader { geometry in
                         Color.clear.onAppear { /* 너비 확보용 */ }
                     }
+                    // 만렙(100 이상)이 아닐 때만 기존 하늘과 땅을 보여줍니다.
+                    if pref.treeLevel < 100 {
+                        // 1. 배경 (하늘)
+                        Circle()
+                            .fill(LinearGradient(colors: [.blue.opacity(0.15), .green.opacity(0.1)], startPoint: .top, endPoint: .bottom))
+                            .frame(width: 300, height: 300)
+                        
+                        // 2. 바닥 (땅)
+                        Ellipse()
+                            .fill(Color.green.opacity(0.3))
+                            .frame(width: treeIndex >= 13 ? 300 : 260, height: 50) // 땅도 조금 넓혀줌
+                            .offset(y: -10)
+                    }
                     
-                    // 1. 배경 (하늘)
-                    Circle()
-                        .fill(LinearGradient(colors: [.blue.opacity(0.15), .green.opacity(0.1)], startPoint: .top, endPoint: .bottom))
-                        .frame(width: 300, height: 300)
-                    
-                    // 2. 바닥 (땅)
-                    Ellipse()
-                        .fill(Color.green.opacity(0.3))
-                        .frame(width: treeIndex >= 13 ? 300 : 260, height: 50) // 땅도 조금 넓혀줌
-                        .offset(y: -10)
-
                     // 3. 중앙 나무
                     Image(GameResourceManager.getMainTreeImage(level: pref.treeLevel))
                         .resizable()
@@ -63,8 +68,31 @@ struct GardenView: View {
                     // [기본 성장] 레벨이 오르면 기본 덩치도 커짐
                         .frame(width: calculatedWidth) // 계산된 너비 적용
                         .scaleEffect(isPulsing ? 1.03 : 1.0)// 숨쉬기
-                        .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 10)
-                    //.offset(y: -40)
+                    
+                    // [핵심] 만렙 전용 블렌딩 이펙트 적용
+                        .if(pref.treeLevel >= 100) { view in
+                            view
+                                // 가장자리를 부드럽게 날리는 그라데이션 마스크
+                                .mask(
+                                    RadialGradient(
+                                        colors: [.black, .black, .clear], // 중심은 선명, 끝은 투명
+                                        center: .center,
+                                        startRadius: calculatedWidth * 0.3, // 이미지 중심부 60%는 선명 유지
+                                        endRadius: calculatedWidth * 0.55   // 가장자리 40% 구간에서 서서히 사라짐
+                                    )
+                                )
+                                // 신비로운 발광 효과 (Glow) 추가
+                                .shadow(color: .cyan.opacity(0.6), radius: 30, x: 0, y: 0)
+                                .shadow(color: .purple.opacity(0.4), radius: 15, x: 0, y: 0)
+                        }
+
+                        //.shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 10)
+                        
+                        // 기존 바닥 그림자는 만렙 외에서만 적용
+                        .if(pref.treeLevel < 100) { view in
+                            view.shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 10)
+                        }
+                        
                         .offset(y: treeIndex >= 13 ? -10 : -30)//나무가 아무리 커져도 바닥(땅) 근처에 머물도록 고정값 또는 작은 비율 적용
                         .zIndex(2)
                         .overlay {
@@ -256,5 +284,17 @@ struct GardenView: View {
             .shadow(color: .black.opacity(0.1), radius: 3)
             .offset(x: pos.x, y: pos.y - (index % 2 == 0 ? workerOffset : -workerOffset))
             .zIndex(pos.z)
+    }
+}
+
+
+// [필수] 조건부 modifier 적용을 위한 확장 (파일 최하단이나 별도 파일에 추가)
+extension View {
+    @ViewBuilder func `if`<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
+        if condition {
+            transform(self)
+        } else {
+            self
+        }
     }
 }
