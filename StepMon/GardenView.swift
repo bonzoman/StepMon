@@ -16,116 +16,132 @@ struct GardenView: View {
     @State private var floatingText: String? = nil
     @State private var floatingOffset: CGFloat = 0
     @State private var floatingOpacity: Double = 0
+    private var treeIndex: Int {
+        GameResourceManager.getTreeImageIndex(level: pref.treeLevel)
+    }
+
     var body: some View {
-        VStack(spacing: 10) {
+        GeometryReader { geometry in // [추가] 부모 뷰의 크기 정보 가져오기
+            let availableWidth = geometry.size.width
             
-            // --- [메인 조립 스테이지] ---
-            ZStack(alignment: .bottom) {
+            // 이미지 너비 계산
+            let calculatedWidth: CGFloat = {
+                let baseWidth: CGFloat = 180
+                if treeIndex >= 13 {
+                    let growthStep = CGFloat(treeIndex - 13)
+                    // availableWidth(화면 너비)를 기준으로 최대 크기 제한
+                    return min(baseWidth + (growthStep * 25), availableWidth * 1.2)
+                } else {
+                    return baseWidth
+                }
+            }()
 
-                // 1. 배경 (하늘)
-                Circle()
-                    .fill(LinearGradient(colors: [.blue.opacity(0.15), .green.opacity(0.1)], startPoint: .top, endPoint: .bottom))
-                    .frame(width: 300, height: 300)
-                
-                // 2. 바닥 (땅)
-                Ellipse()
-                    .fill(Color.green.opacity(0.3))
-                    .frame(width: 260, height: 50)
-                    .offset(y: -10)
-                
-                // 3. 중앙 나무 (성장 로직 적용)
-                //let progress = GameResourceManager.getLevelProgressInStep(level: pref.treeLevel)
-                
-                Image(GameResourceManager.getMainTreeImage(level: pref.treeLevel))
-                    .resizable()
-                    .scaledToFit()
-                    // [기본 성장] 레벨이 오르면 기본 덩치도 커짐
-                    //.frame(width: 180 + CGFloat(pref.treeLevel / 2))
-                    .frame(width: 200)
-
-                    // [미세 성장] 다음 이미지 교체 전까지 15% 정도 부풀어 오름 (Interpolation)
-                    // 예: Lv.1(1.0배) -> Lv.5(1.07배) -> Lv.9(1.13배) -> Lv.10(이미지 교체 & 1.0배 리셋)
-                    //.scaleEffect(isPulsing ? (1.03 + (progress * 0.15)) : (1.0 + (progress * 0.15)))
-                
-                    // 수정 후 (15% 부풀기 제거, 숨쉬기만 유지)
-                    .scaleEffect(isPulsing ? 1.03 : 1.0)
-                
-                
-                    // [그림자] 나무가 커지면 그림자도 진해짐
-                    //.shadow(color: .black.opacity(0.1 + (progress * 0.05)), radius: 10, x: 0, y: 10)
-                
-                    // 수정 후 (불투명도 고정)
-                    .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 10)
-                
-                    .offset(y: -40)
-                    .zIndex(2)
-                    // [추가] 파티클 효과 레이어
-                    .overlay {
-                        // [핵심] .id(UUID)를 통해 터치할 때마다 새로운 뷰로 인식시켜 애니메이션 강제 재생
-                        if showBigSplash {
-                            SplashEffectView(isBig: true, isSuper: pref.isSuperUser)
-                                .id(bigSplashID)
-                        }
-                        if showSplash {
-                            SplashEffectView(isBig: false, isSuper: false)
-                                .id(smallSplashID)
-                        }
-                        // [추가] 플로팅 보상 텍스트
-                        if let text = floatingText {
-                            Text(text)
-                                .font(.system(size: 28, weight: .black, design: .rounded))
-                                .foregroundStyle(.blue)
-                                .offset(y: floatingOffset)
-                                .opacity(floatingOpacity)
-                        }
-                    }
-                    // [추가] 터치 이벤트
-                    .onTapGesture {
-                        handleTreeTap()
-                    }
-                    .animation(.spring(response: 0.6, dampingFraction: 0.7), value: pref.treeLevel)
-                
-                // 4. 일꾼들 (기존 유지)
-                ForEach(0..<getWorkerCount(level: pref.workerLevel), id: \.self) { index in
-                    workerView(at: index)
-                }
-            }
-            .frame(height: 320)
-            .onAppear {
-                // 숨쉬기 애니메이션
-                withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
-                    isPulsing = true
-                }
-                // 일꾼 움직임
-                withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
-                    workerOffset = 5
-                }
-            }
-            
-            // --- [버튼 구역] ---
             VStack(spacing: 10) {
-                Text("Lv.\(pref.treeLevel) 생명의 숲")
-                    .font(.system(.headline, design: .rounded))
-                    .foregroundStyle(.secondary)
                 
-                Button(action: { showUpgradeSheet = true }) {
-                    Label("가꾸기", systemImage: "leaf.fill")
-                        .font(.headline)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 8)
+                // --- [메인 조립 스테이지] ---
+                ZStack(alignment: .bottom) {
+                    // 화면 너비를 동적으로 가져오기 위한 배경 레이어
+                    GeometryReader { geometry in
+                        Color.clear.onAppear { /* 너비 확보용 */ }
+                    }
+                    
+                    // 1. 배경 (하늘)
+                    Circle()
+                        .fill(LinearGradient(colors: [.blue.opacity(0.15), .green.opacity(0.1)], startPoint: .top, endPoint: .bottom))
+                        .frame(width: 300, height: 300)
+                    
+                    // 2. 바닥 (땅)
+                    Ellipse()
+                        .fill(Color.green.opacity(0.3))
+                        .frame(width: treeIndex >= 13 ? 300 : 260, height: 50) // 땅도 조금 넓혀줌
+                        .offset(y: -10)
+
+                    // 3. 중앙 나무
+                    Image(GameResourceManager.getMainTreeImage(level: pref.treeLevel))
+                        .resizable()
+                        .scaledToFit()
+                    // [기본 성장] 레벨이 오르면 기본 덩치도 커짐
+                        .frame(width: calculatedWidth) // 계산된 너비 적용
+                        .scaleEffect(isPulsing ? 1.03 : 1.0)// 숨쉬기
+                        .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 10)
+                    //.offset(y: -40)
+                        .offset(y: treeIndex >= 13 ? -10 : -30)//나무가 아무리 커져도 바닥(땅) 근처에 머물도록 고정값 또는 작은 비율 적용
+                        .zIndex(2)
+                        .overlay {
+                            // [핵심] .id(UUID)를 통해 터치할 때마다 새로운 뷰로 인식시켜 애니메이션 강제 재생
+                            if showBigSplash {
+                                SplashEffectView(isBig: true, isSuper: pref.isSuperUser)
+                                    .id(bigSplashID)
+                            }
+                            if showSplash {
+                                SplashEffectView(isBig: false, isSuper: false)
+                                    .id(smallSplashID)
+                            }
+                            // [추가] 플로팅 보상 텍스트
+                            if let text = floatingText {
+                                Text(text)
+                                    .font(.system(size: 28, weight: .black, design: .rounded))
+                                    .foregroundStyle(.blue)
+                                    .offset(y: floatingOffset)
+                                    .opacity(floatingOpacity)
+                            }
+                        }
+                    // [추가] 터치 이벤트
+                        .onTapGesture {
+                            handleTreeTap()
+                        }
+                    //.animation(.spring(response: 0.6, dampingFraction: 0.7), value: pref.treeLevel)
+                        .animation(.spring(response: 0.8, dampingFraction: 0.6), value: treeIndex)
+                    
+                    
+                    // 4. 일꾼들 (기존 유지)
+                    ForEach(0..<getWorkerCount(level: pref.workerLevel), id: \.self) { index in
+                        workerView(at: index)
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.capsule)
-                .tint(.green)
-                .shadow(radius: 3)
+                // [핵심] ZStack에 유연한 높이를 부여하여 나무가 커질 때 잘리지 않게 함
+                .frame(height: 350 + (treeIndex >= 13 ? CGFloat(treeIndex - 13) * 7 : 0))
+                
+                .onAppear {
+                    // 숨쉬기 애니메이션
+                    withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+                        isPulsing = true
+                    }
+                    // 일꾼 움직임
+                    withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                        workerOffset = 5
+                    }
+                }
+                
+                // --- [버튼 구역] ---
+                VStack(spacing: 10) {
+                    Text("Lv.\(pref.treeLevel) 생명의 숲")
+                        .font(.system(.headline, design: .rounded))
+                        .foregroundStyle(.secondary)
+                    
+                    Button(action: { showUpgradeSheet = true }) {
+                        Label("가꾸기", systemImage: "leaf.fill")
+                            .font(.headline)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.capsule)
+                    .tint(.green)
+                    .shadow(radius: 3)
+                }
             }
+            .padding()
+            .sheet(isPresented: $showUpgradeSheet) {
+                UpgradeSheetView(pref: pref)
+                    .presentationDetents([.fraction(0.7)])
+                    .presentationDragIndicator(.visible)
+            }
+            // [해결 3] GeometryReader 내부에서 가로 중앙 정렬 보장
+            .frame(width: availableWidth)
         }
-        .padding()
-        .sheet(isPresented: $showUpgradeSheet) {
-            UpgradeSheetView(pref: pref)
-                .presentationDetents([.fraction(0.7)])
-                .presentationDragIndicator(.visible)
-        }
+        // 전체 뷰의 높이가 콘텐츠에 맞춰 늘어나도록 설정
+        .frame(height: 460 + (treeIndex >= 13 ? CGFloat(treeIndex - 13) * 8 : 0))
     }
     
 
