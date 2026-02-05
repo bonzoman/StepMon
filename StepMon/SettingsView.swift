@@ -32,9 +32,9 @@ struct SettingsView: View {
                         Stepper(value: Bindable(pref).stepThreshold, in: 100...1000, step: 100) {
                             Label {
                                 HStack(spacing: 4) {
-                                    Text("최소 활동 기준:")
+                                    Text("최소 걸음 수:")
                                     // 현재 설정값 강조
-                                    Text("\(pref.stepThreshold)보").fontWeight(.bold)
+                                    Text("\(pref.stepThreshold)").fontWeight(.bold)
                                         .foregroundStyle(.blue)
                                 }
                             } icon: {

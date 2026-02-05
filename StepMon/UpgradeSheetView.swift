@@ -15,15 +15,15 @@ struct UpgradeSheetView: View {
     // 상태에 따른 안내 문구 로직
     var statusMessage: String {
         if pref.isSuperUser {
-            return "슈퍼유저 모드: 생명수 소모 없이 즉시 레벨업"
+            return String(localized: "슈퍼유저 모드: 생명수 소모 없이 즉시 레벨업")
         } else if pref.lifeWater >= 10 {
             // [수정] 나무와 일꾼 모두 만렙인 경우 안내 문구 변경
             if pref.treeLevel >= 100 && pref.workerLevel >= 100 {
-                return "모든 정원 관리가 완료되었습니다!"
+                return String(localized: "모든 정원 관리가 완료되었습니다!")
             }
-            return "버튼을 눌러 생명수를 주입하세요."
+            return String(localized: "버튼을 눌러 생명수를 주입하세요.")
         } else {
-            return "생명수가 부족해요!"
+            return String(localized: "생명수가 부족해요!")
         }
     }
     
@@ -151,7 +151,7 @@ struct UpgradeSheetView: View {
                 }
                 .disabled(isWatchingAd || isCoolDownActive)
                 .padding(.horizontal, 20)
-                .padding(.top, 12)                
+                .padding(.top, 12)
                 .padding(.bottom, 12) // 기본 패딩만 주면 시스템이 알아서 하단 홈 바(Safe Area)와 겹치지 않게 밀어줍니다.
             }
             .background(.ultraThinMaterial) // 반투명 배경으로 리스트가 비쳐 보이게 처리
