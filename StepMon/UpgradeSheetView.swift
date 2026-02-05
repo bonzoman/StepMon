@@ -29,96 +29,81 @@ struct UpgradeSheetView: View {
     
     var body: some View {
         NavigationStack {
-            // [변경] ZStack으로 전체를 감싸서 하단 버튼을 리스트 위에 띄웁니다.
-            ZStack(alignment: .bottom) {
-                ScrollView {
-                    VStack(spacing: 20) {
-                        VStack(spacing: 5) {
-                            Text("💧 보유 생명수")
-                                .font(.subheadline)
-                                .foregroundStyle(.gray)
-                            
-                            Text("\(pref.lifeWater)")
-                                .font(.system(size: 36, weight: .black, design: .rounded))
-                                .foregroundStyle(.blue)
-                                .contentTransition(.numericText())
-                            
-                            if pref.isSuperUser {
-                                Text("⚡️ SUPER USER ACTIVE ⚡️")
-                                    .font(.caption2)
-                                    .fontWeight(.black)
-                                    .foregroundStyle(.orange)
-                            }
-                            
-                            Text(statusMessage)
-                                .font(.caption)
-                            // 생명수가 부족하면 빨간색으로 경고, 아니면 회색
-                                .foregroundStyle((!pref.isSuperUser && pref.lifeWater < 10) ? .red : .secondary)
-                                //.padding(.top, 5)
-                        }
-                        //.padding(.top, 10)
+            ScrollView {
+                VStack(spacing: 20) {
+                    VStack(spacing: 5) {
+                        Text("💧 보유 생명수")
+                            .font(.subheadline)
+                            .foregroundStyle(.gray)
                         
+                        Text("\(pref.lifeWater)")
+                            .font(.system(size: 36, weight: .black, design: .rounded))
+                            .foregroundStyle(.blue)
+                            .contentTransition(.numericText())
                         
-                        
-                        
-                        // [추가] 생명수 부족 시 광고 버튼 노출 로직
-//                        let lastAd = pref.lastAdDate ?? Date.distantPast
-//                        let timeElapsed = now.timeIntervalSince(lastAd)
-//                        let isCoolDownActive = timeElapsed < coolDownTime
-
-                        //Divider()
-                        
-                        // 1. 만보기 나무
-                        let treeCost = getCost(level: pref.treeLevel)
-                        UpgradeRow(
-                            title: String(localized: "만보기 나무"),
-                            level: pref.treeLevel,
-                            maxLevel: 100, // [추가] 만렙 기준 전달
-                            imageName: GameResourceManager.getMainTreeImage(level: pref.treeLevel),
-                            buttonColor: .green,
-                            totalCost: treeCost,
-                            currentInvest: pref.treeInvestment
-                        ) {
-                            invest(target: .tree, totalCost: treeCost)
-                        }
-                        
-                        // 2. 스텝몬 일꾼
-                        let workerCost = getCost(level: pref.workerLevel)
-                        UpgradeRow(
-                            title: String(localized: "스텝몬 일꾼"),
-                            level: pref.workerLevel,
-                            maxLevel: 100, // [추가] 만렙 기준 전달
-                            imageName: GameResourceManager.getMainWorkerImage(level: pref.workerLevel),
-                            buttonColor: .blue,
-                            totalCost: workerCost,
-                            currentInvest: pref.workerInvestment
-                        ) {
-                            invest(target: .worker, totalCost: workerCost)
-                        }
-                        
-                        // 일꾼 효율 설명
-                        HStack {
-                            Image(systemName: "lightbulb.fill")
+                        if pref.isSuperUser {
+                            Text("⚡️ SUPER USER ACTIVE ⚡️")
+                                .font(.caption2)
+                                .fontWeight(.black)
                                 .foregroundStyle(.orange)
-                                .font(.caption)
-                            Text("일꾼 레벨이 오르면 생명수 획득 효율이 증가합니다.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                        }
-                        .padding(.horizontal)
-                        .padding(.bottom, 20)
-                        
-                        // 하단 플로팅 바 공간 확보를 위한 패딩
-                        if pref.lifeWater < 10 {
-                            Color.clear.frame(height: 100)
                         }
                         
+                        Text(statusMessage)
+                            .font(.caption)
+                        // 생명수가 부족하면 빨간색으로 경고, 아니면 회색
+                            .foregroundStyle((!pref.isSuperUser && pref.lifeWater < 10) ? .red : .secondary)
+                            //.padding(.top, 5)
                     }
-                    .padding()
+                    //.padding(.top, 10)
+
+                    
+                    //Divider()
+                    
+                    // 1. 만보기 나무
+                    let treeCost = getCost(level: pref.treeLevel)
+                    UpgradeRow(
+                        title: String(localized: "만보기 나무"),
+                        level: pref.treeLevel,
+                        maxLevel: 100, // [추가] 만렙 기준 전달
+                        imageName: GameResourceManager.getMainTreeImage(level: pref.treeLevel),
+                        buttonColor: .green,
+                        totalCost: treeCost,
+                        currentInvest: pref.treeInvestment
+                    ) {
+                        invest(target: .tree, totalCost: treeCost)
+                    }
+                    
+                    // 2. 스텝몬 일꾼
+                    let workerCost = getCost(level: pref.workerLevel)
+                    UpgradeRow(
+                        title: String(localized: "스텝몬 일꾼"),
+                        level: pref.workerLevel,
+                        maxLevel: 100, // [추가] 만렙 기준 전달
+                        imageName: GameResourceManager.getMainWorkerImage(level: pref.workerLevel),
+                        buttonColor: .blue,
+                        totalCost: workerCost,
+                        currentInvest: pref.workerInvestment
+                    ) {
+                        invest(target: .worker, totalCost: workerCost)
+                    }
+                    
+                    // 일꾼 효율 설명
+                    HStack {
+                        Image(systemName: "lightbulb.fill")
+                            .foregroundStyle(.orange)
+                            .font(.caption)
+                        Text("일꾼 레벨이 오르면 생명수 획득 효율이 증가합니다.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom, 20)
                 }
-                .background(Color(uiColor: .systemGroupedBackground))
-                // 3. 최하단 고정 플로팅 바 (조건부 노출)
+                .padding()
+            }
+            .background(Color(uiColor: .systemGroupedBackground))
+            .safeAreaInset(edge: .bottom) {
                 if pref.lifeWater < 10 {
                     adFloatingBar
                 }
@@ -166,10 +151,8 @@ struct UpgradeSheetView: View {
                 }
                 .disabled(isWatchingAd || isCoolDownActive)
                 .padding(.horizontal, 20)
-                .padding(.top, 12)
-                .padding(.bottom, UIApplication.shared.connectedScenes
-                    .compactMap { $0 as? UIWindowScene }
-                    .first?.windows.first?.safeAreaInsets.bottom ?? 20)
+                .padding(.top, 12)                
+                .padding(.bottom, 12) // 기본 패딩만 주면 시스템이 알아서 하단 홈 바(Safe Area)와 겹치지 않게 밀어줍니다.
             }
             .background(.ultraThinMaterial) // 반투명 배경으로 리스트가 비쳐 보이게 처리
         }
