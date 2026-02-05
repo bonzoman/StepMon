@@ -25,7 +25,8 @@ class UserPreference {
     var bgCheckSteps: Int = 0      // 알림 체크 당시의 '구간 걸음 수'
     var bgCheckDate: Date = Date() // 알림 체크한 시간
     var isNotificationEnabled: Bool = false // [추가] 알림 마스터 스위치 상태
-    
+    var lastWinDate: Date? = nil // [추가] 마지막 대박 당첨 시간
+
     // 슈퍼유저 판별 로직
     var isSuperUser: Bool {
         let calendar = Calendar.current
@@ -62,6 +63,7 @@ class UserPreference {
         // 추가된 필드 초기화
         self.bgCheckSteps = 0
         self.bgCheckDate = Date()
+        self.lastWinDate = nil
     }
 }
 
@@ -79,5 +81,6 @@ class NotificationHistory {
         self.threshold = threshold
         self.isNotified = isNotified
         self.intervalMinutes = intervalMinutes
+        
     }
 }

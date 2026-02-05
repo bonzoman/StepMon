@@ -7,7 +7,15 @@ struct GardenView: View {
     @State private var showUpgradeSheet = false
     @State private var isPulsing = false
     @State private var workerOffset: CGFloat = 0
-    
+
+    // [추가] 터치 효과를 위한 상태 변수
+    @State private var bigSplashID = UUID()
+    @State private var smallSplashID = UUID()
+    @State private var showSplash: Bool = false
+    @State private var showBigSplash: Bool = false
+    @State private var floatingText: String? = nil
+    @State private var floatingOffset: CGFloat = 0
+    @State private var floatingOpacity: Double = 0
     var body: some View {
         VStack(spacing: 10) {
             
@@ -26,23 +34,55 @@ struct GardenView: View {
                     .offset(y: -10)
                 
                 // 3. 중앙 나무 (성장 로직 적용)
-                let progress = GameResourceManager.getLevelProgressInStep(level: pref.treeLevel)
+                //let progress = GameResourceManager.getLevelProgressInStep(level: pref.treeLevel)
                 
                 Image(GameResourceManager.getMainTreeImage(level: pref.treeLevel))
                     .resizable()
                     .scaledToFit()
                     // [기본 성장] 레벨이 오르면 기본 덩치도 커짐
-                    .frame(width: 180 + CGFloat(pref.treeLevel / 2))
-                    
+                    //.frame(width: 180 + CGFloat(pref.treeLevel / 2))
+                    .frame(width: 200)
+
                     // [미세 성장] 다음 이미지 교체 전까지 15% 정도 부풀어 오름 (Interpolation)
                     // 예: Lv.1(1.0배) -> Lv.5(1.07배) -> Lv.9(1.13배) -> Lv.10(이미지 교체 & 1.0배 리셋)
-                    .scaleEffect(isPulsing ? (1.03 + (progress * 0.15)) : (1.0 + (progress * 0.15)))
-                    
+                    //.scaleEffect(isPulsing ? (1.03 + (progress * 0.15)) : (1.0 + (progress * 0.15)))
+                
+                    // 수정 후 (15% 부풀기 제거, 숨쉬기만 유지)
+                    .scaleEffect(isPulsing ? 1.03 : 1.0)
+                
+                
                     // [그림자] 나무가 커지면 그림자도 진해짐
-                    .shadow(color: .black.opacity(0.1 + (progress * 0.05)), radius: 10, x: 0, y: 10)
+                    //.shadow(color: .black.opacity(0.1 + (progress * 0.05)), radius: 10, x: 0, y: 10)
+                
+                    // 수정 후 (불투명도 고정)
+                    .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 10)
+                
                     .offset(y: -40)
                     .zIndex(2)
-                    // 부드러운 애니메이션
+                    // [추가] 파티클 효과 레이어
+                    .overlay {
+                        // [핵심] .id(UUID)를 통해 터치할 때마다 새로운 뷰로 인식시켜 애니메이션 강제 재생
+                        if showBigSplash {
+                            SplashEffectView(isBig: true, isSuper: pref.isSuperUser)
+                                .id(bigSplashID)
+                        }
+                        if showSplash {
+                            SplashEffectView(isBig: false, isSuper: false)
+                                .id(smallSplashID)
+                        }
+                        // [추가] 플로팅 보상 텍스트
+                        if let text = floatingText {
+                            Text(text)
+                                .font(.system(size: 28, weight: .black, design: .rounded))
+                                .foregroundStyle(.blue)
+                                .offset(y: floatingOffset)
+                                .opacity(floatingOpacity)
+                        }
+                    }
+                    // [추가] 터치 이벤트
+                    .onTapGesture {
+                        handleTreeTap()
+                    }
                     .animation(.spring(response: 0.6, dampingFraction: 0.7), value: pref.treeLevel)
                 
                 // 4. 일꾼들 (기존 유지)
@@ -87,6 +127,94 @@ struct GardenView: View {
                 .presentationDragIndicator(.visible)
         }
     }
+    
+
+    
+    // [추가] 나무 터치 로직: 1시간 1회 랜덤 보상
+    private func handleTreeTap() {
+        let now = Date()
+            
+        // Binding 에러 방지를 위해 값을 상수에 담기
+        let lastWin = pref.lastWinDate ?? Date.distantPast
+        
+        // 슈퍼유저라면 무조건 true, 일반 유저라면 1시간(3600초) 체크
+        let canWin = pref.isSuperUser || now.timeIntervalSince(lastWin) >= 3600
+        
+        if canWin {
+            // 🎉 [대박 당첨] 30, 40, 50 중 랜덤
+            let rewards = [30, 40, 50]
+            let bonus = rewards.randomElement() ?? 30
+            pref.lifeWater += bonus
+            pref.lastWinDate = now
+            
+            // 플로팅 텍스트 실행
+            showFloatingText(amount: bonus)
+            
+            bigSplashID = UUID()
+            showBigSplash = true
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.success)
+            
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                showBigSplash = false
+            }
+        } else {
+            smallSplashID = UUID()
+            // 💧 [일반 터치] 효과만 발생
+            showSplash = true
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+            
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                showSplash = false
+            }
+        }
+    }
+
+    
+    func showFloatingText(amount: Int) {
+        floatingText = "+\(amount)"
+        floatingOffset = -50
+        floatingOpacity = 1.0
+        
+        withAnimation(.easeOut(duration: 0.8)) {
+            floatingOffset = -150 // 위로 솟구침
+            floatingOpacity = 0 // 사라짐
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            floatingText = nil
+        }
+    }
+    
+    struct SplashEffectView: View {
+        @State private var animate = false
+        var isBig: Bool
+        var isSuper: Bool
+        
+        var body: some View {
+            ZStack {
+                ForEach(0..<(isSuper ? 35 : (isBig ? 20 : 8)), id: \.self) { i in
+                    Image(systemName: "drop.fill")
+                        .foregroundStyle(isSuper ? .yellow : (isBig ? .cyan : .blue.opacity(0.8)))
+                        .font(.system(size: isSuper ? CGFloat.random(in: 15...28) : (isBig ? 18 : 10)))
+                        .offset(y: animate ? (isSuper ? -130 : (isBig ? -110 : -60)) : 0)
+                        .rotationEffect(.degrees(Double(i) * (isSuper ? 10.2 : (isBig ? 18 : 45))))
+                        .scaleEffect(animate ? 2.0 : 1.0)
+                        .opacity(animate ? 0 : 1)
+                }
+            }
+            .onAppear {
+                // 연타를 위해 아주 빠른 duration(0.4~0.5초) 적용
+                withAnimation(.easeOut(duration: isSuper ? 0.4 : 0.5)) {
+                    animate = true
+                }
+            }
+        }
+    }
+
     
     // 일꾼 수 계산 (기존 로직 유지)
     func getWorkerCount(level: Int) -> Int {
