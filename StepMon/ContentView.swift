@@ -154,7 +154,9 @@ struct ContentView: View {
                                         .font(.system(size: 24, weight: .bold, design: .rounded))
                                         .contentTransition(.numericText())
                                         .scaleEffect(rewardPulse) // 숫자 펄스 효과
-                                    
+                                        .lineLimit(1)              // 무조건 한 줄로 표시
+                                        .minimumScaleFactor(0.5)   // 공간 부족 시 원래 크기의 50%까지 축소해서라도 다 보여줌
+                                        .layoutPriority(1)         // 다른 텍스트보다 공간을 먼저 차지하도록 우선순위 부여
                                     Text("생명수")
                                         .font(.caption)
                                         .foregroundStyle(.gray)
