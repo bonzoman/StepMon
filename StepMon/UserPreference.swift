@@ -21,12 +21,13 @@ class UserPreference {
     var lastAccessDate: Date
     var dailyEarnedWater: Int
     
-    // [추가됨] 백그라운드 알림 체크용 데이터 (구간 걸음 수 & 체크 시간)
+    // 백그라운드 알림 체크용 데이터 (구간 걸음 수 & 체크 시간)
     var bgCheckSteps: Int = 0      // 알림 체크 당시의 '구간 걸음 수'
     var bgCheckDate: Date = Date() // 알림 체크한 시간
-    var isNotificationEnabled: Bool = false // [추가] 알림 마스터 스위치 상태
-    var lastWinDate: Date? = nil // [추가] 마지막 대박 당첨 시간
-
+    var isNotificationEnabled: Bool = false // 알림 마스터 스위치 상태
+    var lastWinDate: Date? = nil // 마지막 대박 당첨 시간
+    var lastAdDate: Date? = nil // 마지막 광고 시청 시간
+    
     // 슈퍼유저 판별 로직
     var isSuperUser: Bool {
         let calendar = Calendar.current
@@ -39,13 +40,13 @@ class UserPreference {
     
     init(checkIntervalMinutes: Int = 60,
          stepThreshold: Int = 100,
-         isNotificationEnabled: Bool = true, // [추가]
+         isNotificationEnabled: Bool = true,
          startTime: Date = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date())!,
          endTime: Date = Calendar.current.date(bySettingHour: 22, minute: 0, second: 0, of: Date())!) {
         
         self.checkIntervalMinutes = checkIntervalMinutes
         self.stepThreshold = stepThreshold
-        self.isNotificationEnabled = isNotificationEnabled // [추가]
+        self.isNotificationEnabled = isNotificationEnabled
         self.startTime = startTime
         self.endTime = endTime
         
@@ -64,6 +65,7 @@ class UserPreference {
         self.bgCheckSteps = 0
         self.bgCheckDate = Date()
         self.lastWinDate = nil
+        self.lastAdDate = nil // 초기값은 광고를 본 적 없는 상태
     }
 }
 

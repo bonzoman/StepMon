@@ -1,11 +1,17 @@
 import SwiftUI
 import SwiftData
 import UIKit
+import Combine
 
 struct UpgradeSheetView: View {
     @Environment(\.dismiss) var dismiss
     @Bindable var pref: UserPreference
-    
+    @State private var isWatchingAd = false // 광고 시청 상태
+    @State private var now = Date() // 쿨타임 실시간 갱신용
+    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    let adRewardAmount = 50 // 광고 보상량
+    let coolDownTime: TimeInterval = 600 // 10분 (600초)
+  
     // 상태에 따른 안내 문구 로직
     var statusMessage: String {
         if pref.isSuperUser {
@@ -23,80 +29,100 @@ struct UpgradeSheetView: View {
     
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    
-                    VStack(spacing: 5) {
-                        Text("💧 보유 생명수")
-                            .font(.subheadline)
-                            .foregroundStyle(.gray)
+            // [변경] ZStack으로 전체를 감싸서 하단 버튼을 리스트 위에 띄웁니다.
+            ZStack(alignment: .bottom) {
+                ScrollView {
+                    VStack(spacing: 20) {
+                        VStack(spacing: 5) {
+                            Text("💧 보유 생명수")
+                                .font(.subheadline)
+                                .foregroundStyle(.gray)
+                            
+                            Text("\(pref.lifeWater)")
+                                .font(.system(size: 36, weight: .black, design: .rounded))
+                                .foregroundStyle(.blue)
+                                .contentTransition(.numericText())
+                            
+                            if pref.isSuperUser {
+                                Text("⚡️ SUPER USER ACTIVE ⚡️")
+                                    .font(.caption2)
+                                    .fontWeight(.black)
+                                    .foregroundStyle(.orange)
+                            }
+                            
+                            Text(statusMessage)
+                                .font(.caption)
+                            // 생명수가 부족하면 빨간색으로 경고, 아니면 회색
+                                .foregroundStyle((!pref.isSuperUser && pref.lifeWater < 10) ? .red : .secondary)
+                                //.padding(.top, 5)
+                        }
+                        //.padding(.top, 10)
                         
-                        Text("\(pref.lifeWater)")
-                            .font(.system(size: 36, weight: .black, design: .rounded))
-                            .foregroundStyle(.blue)
-                            .contentTransition(.numericText())
                         
-                        if pref.isSuperUser {
-                            Text("⚡️ SUPER USER ACTIVE ⚡️")
-                                .font(.caption2)
-                                .fontWeight(.black)
-                                .foregroundStyle(.orange)
+                        
+                        
+                        // [추가] 생명수 부족 시 광고 버튼 노출 로직
+//                        let lastAd = pref.lastAdDate ?? Date.distantPast
+//                        let timeElapsed = now.timeIntervalSince(lastAd)
+//                        let isCoolDownActive = timeElapsed < coolDownTime
+
+                        //Divider()
+                        
+                        // 1. 만보기 나무
+                        let treeCost = getCost(level: pref.treeLevel)
+                        UpgradeRow(
+                            title: String(localized: "만보기 나무"),
+                            level: pref.treeLevel,
+                            maxLevel: 100, // [추가] 만렙 기준 전달
+                            imageName: GameResourceManager.getMainTreeImage(level: pref.treeLevel),
+                            buttonColor: .green,
+                            totalCost: treeCost,
+                            currentInvest: pref.treeInvestment
+                        ) {
+                            invest(target: .tree, totalCost: treeCost)
                         }
                         
-                        Text(statusMessage)
-                            .font(.caption)
-                             // 생명수가 부족하면 빨간색으로 경고, 아니면 회색
-                            .foregroundStyle((!pref.isSuperUser && pref.lifeWater < 10) ? .red : .secondary)
-                            .padding(.top, 5)
+                        // 2. 스텝몬 일꾼
+                        let workerCost = getCost(level: pref.workerLevel)
+                        UpgradeRow(
+                            title: String(localized: "스텝몬 일꾼"),
+                            level: pref.workerLevel,
+                            maxLevel: 100, // [추가] 만렙 기준 전달
+                            imageName: GameResourceManager.getMainWorkerImage(level: pref.workerLevel),
+                            buttonColor: .blue,
+                            totalCost: workerCost,
+                            currentInvest: pref.workerInvestment
+                        ) {
+                            invest(target: .worker, totalCost: workerCost)
+                        }
+                        
+                        // 일꾼 효율 설명
+                        HStack {
+                            Image(systemName: "lightbulb.fill")
+                                .foregroundStyle(.orange)
+                                .font(.caption)
+                            Text("일꾼 레벨이 오르면 생명수 획득 효율이 증가합니다.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 20)
+                        
+                        // 하단 플로팅 바 공간 확보를 위한 패딩
+                        if pref.lifeWater < 10 {
+                            Color.clear.frame(height: 100)
+                        }
+                        
                     }
-                    .padding(.top, 10)
-                    
-                    Divider()
-                    
-                    // 1. 만보기 나무
-                    let treeCost = getCost(level: pref.treeLevel)
-                    UpgradeRow(
-                        title: String(localized: "만보기 나무"),
-                        level: pref.treeLevel,
-                        maxLevel: 100, // [추가] 만렙 기준 전달
-                        imageName: GameResourceManager.getMainTreeImage(level: pref.treeLevel),
-                        buttonColor: .green,
-                        totalCost: treeCost,
-                        currentInvest: pref.treeInvestment
-                    ) {
-                        invest(target: .tree, totalCost: treeCost)
-                    }
-                    
-                    // 2. 스텝몬 일꾼
-                    let workerCost = getCost(level: pref.workerLevel)
-                    UpgradeRow(
-                        title: String(localized: "스텝몬 일꾼"),
-                        level: pref.workerLevel,
-                        maxLevel: 100, // [추가] 만렙 기준 전달
-                        imageName: GameResourceManager.getMainWorkerImage(level: pref.workerLevel),
-                        buttonColor: .blue,
-                        totalCost: workerCost,
-                        currentInvest: pref.workerInvestment
-                    ) {
-                        invest(target: .worker, totalCost: workerCost)
-                    }
-                    
-                    // 일꾼 효율 설명
-                    HStack {
-                        Image(systemName: "lightbulb.fill")
-                            .foregroundStyle(.orange)
-                            .font(.caption)
-                        Text("일꾼 레벨이 오르면 생명수 획득 효율이 증가합니다.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                    }
-                    .padding(.horizontal)
-                    .padding(.bottom, 20)
+                    .padding()
                 }
-                .padding()
+                .background(Color(uiColor: .systemGroupedBackground))
+                // 3. 최하단 고정 플로팅 바 (조건부 노출)
+                if pref.lifeWater < 10 {
+                    adFloatingBar
+                }
             }
-            .background(Color(uiColor: .systemGroupedBackground))
             .navigationTitle("정원 관리소")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -106,6 +132,51 @@ struct UpgradeSheetView: View {
             }
         }
     }
+    
+    // --- [하단 고정 플로팅 바 뷰 블록] ---
+    private var adFloatingBar: some View {
+        let lastAd = pref.lastAdDate ?? Date.distantPast
+        let timeElapsed = now.timeIntervalSince(lastAd)
+        let isCoolDownActive = timeElapsed < coolDownTime
+
+        return VStack(spacing: 0) {
+            Divider() // 구분선
+            
+            VStack(spacing: 8) {
+                Button(action: { simulateAdReward() }) {
+                    HStack {
+                        if isWatchingAd {
+                            ProgressView().tint(.white).padding(.trailing, 5)
+                            Text("광고 시청 중...")
+                        } else if isCoolDownActive {
+                            let remaining = Int(coolDownTime - timeElapsed)
+                            Image(systemName: "timer")
+                            Text("(광고) \(remaining / 60)분 \(remaining % 60)초")
+                        } else {
+                            Image(systemName: "play.tv.fill")
+                            Text("광고 보고 \(adRewardAmount) 💧 받기")
+                        }
+                    }
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(isWatchingAd || isCoolDownActive ? Color.gray : Color.blue)
+                    .cornerRadius(12)
+                }
+                .disabled(isWatchingAd || isCoolDownActive)
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, UIApplication.shared.connectedScenes
+                    .compactMap { $0 as? UIWindowScene }
+                    .first?.windows.first?.safeAreaInsets.bottom ?? 20)
+            }
+            .background(.ultraThinMaterial) // 반투명 배경으로 리스트가 비쳐 보이게 처리
+        }
+        .transition(.move(edge: .bottom))
+        .onReceive(timer) { _ in self.now = Date() }
+    }
+    
     
     // UpgradeRow 컴포넌트
     @ViewBuilder
@@ -163,7 +234,7 @@ struct UpgradeSheetView: View {
                             .bold()
                     }
                 }
-                .padding(.vertical, 8)
+                .padding(.vertical, 4)
                 .padding(.horizontal, 10)
                 .frame(minWidth: 44)
             }
@@ -236,5 +307,30 @@ struct UpgradeSheetView: View {
     func triggerSuccessHaptic() {
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
+    }
+    
+    // 버튼 색상 결정 함수
+    private func getButtonColor(_ watching: Bool, _ cooling: Bool) -> Color {
+        if watching || cooling { return .gray }
+        return .blue
+    }
+
+    // 광고 시청 시뮬레이션 함수
+    private func simulateAdReward() {
+        isWatchingAd = true
+        
+        // 20년 차 선배님께 익숙한 비동기 처리 (3초 후 보상)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            pref.lifeWater += adRewardAmount
+            
+            //광고 시청 시간 기록 (이게 있어야 쿨타임이 작동합니다)
+            pref.lastAdDate = Date()
+            
+            isWatchingAd = false
+            
+            // 햅틱 피드백 추가
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.success)
+        }
     }
 }
