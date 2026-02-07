@@ -8,6 +8,9 @@ class RewardedAdManager: NSObject {
     static let shared = RewardedAdManager()
     
     private var rewardedAd: RewardedAd?
+    // [추가] 보상 획득 상태 및 콜백 저장 변수
+    private var didEarnReward: Bool = false
+    private var onRewardEarned: (() -> Void)?
     
     #if DEBUG
     let adUnitID = "ca-app-pub-3940256099942544/1712485313" //test용
@@ -62,16 +65,17 @@ class RewardedAdManager: NSObject {
         }
         
         if let ad = rewardedAd {
-            ad.present(from: root) {
-                let reward = ad.adReward
-                print("🎁 보상 지급: \(reward.amount) \(reward.type)")
-                
-                // 완료 핸들러 실행
-                completion()
+            // 1. 상태 초기화 및 콜백 저장
+            self.didEarnReward = false
+            self.onRewardEarned = completion
+            
+            ad.present(from: root) { [weak self] in
+                // 2. 구글이 "보상 요건 충족"을 알리는 시점 (플래그만 변경)
+                self?.didEarnReward = true
+                print("✨ 보상 요건 충족됨 (아직 지급 전)")
             }
         } else {
             print("⚠️ 광고가 준비되지 않았습니다.")
-            self.isAdLoaded = false
             self.loadAd()
         }
     }
@@ -96,20 +100,26 @@ class RewardedAdManager: NSObject {
 // MARK: - FullScreenContentDelegate
 extension RewardedAdManager: FullScreenContentDelegate {
     
-    func ad(_ ad: FullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) {
-        print("❌ 광고 표시 에러: \(error.localizedDescription)")
-        self.isAdLoaded = false
+    func adDidDismissFullScreenContent(_ ad: FullScreenPresentingAd) {
+        print("🚪 광고 창 닫힘.")
+        
+        // 3. 광고가 정상적으로 닫혔고, 보상 요건도 충족했을 때만 최종 보상 지급
+        if didEarnReward {
+            print("💰 최종 보상 지급 실행")
+            onRewardEarned?()
+        }
+        
+        // 초기화 및 재로드
+        self.didEarnReward = false
+        self.onRewardEarned = nil
+        self.rewardedAd = nil
         self.loadAd()
     }
     
-    func adWillPresentFullScreenContent(_ ad: FullScreenPresentingAd) {
-        print("📺 광고 시청 시작")
-    }
-    
-    func adDidDismissFullScreenContent(_ ad: FullScreenPresentingAd) {
-        print("🚪 광고 닫힘.")
+    func ad(_ ad: FullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) {
         self.isAdLoaded = false
-        self.rewardedAd = nil
+        self.didEarnReward = false
+        self.onRewardEarned = nil
         self.loadAd()
     }
 }

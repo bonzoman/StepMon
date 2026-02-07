@@ -37,14 +37,15 @@ struct UpgradeSheetView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
-                    VStack(spacing: 5) {
+                VStack(spacing: 16) {
+//                    HStack(alignment: .lastTextBaseline, spacing: 8) {
+                    VStack(spacing: 16) {
                         Text("💧 보유 생명수")
                             .font(.subheadline)
                             .foregroundStyle(.gray)
                         
                         Text("\(pref.lifeWater)")
-                            .font(.system(size: 36, weight: .black, design: .rounded))
+                            .font(.system(size: 28, weight: .black, design: .rounded))
                             .foregroundStyle(.blue)
                             .contentTransition(.numericText())
                         
@@ -57,12 +58,9 @@ struct UpgradeSheetView: View {
                         
                         Text(statusMessage)
                             .font(.caption)
-                        // 생명수가 부족하면 빨간색으로 경고, 아니면 회색
                             .foregroundStyle((!pref.isSuperUser && pref.lifeWater < 10) ? .red : .secondary)
-                        //.padding(.top, 5)
+                        
                     }
-                    //.padding(.top, 10)
-                    
                     
                     //Divider()
                     
@@ -107,7 +105,7 @@ struct UpgradeSheetView: View {
                     .padding(.horizontal)
                     .padding(.bottom, 20)
                 }
-                .padding()
+                .padding(.horizontal) // 좌우 여백만 적용
             }
             .background(Color(uiColor: .systemGroupedBackground))
             .safeAreaInset(edge: .bottom) {
@@ -122,7 +120,7 @@ struct UpgradeSheetView: View {
                     Button("닫기") { dismiss() }
                 }
             }
-            // [추가] 뷰 진입 시 광고 미리 로드
+            // 뷰 진입 시 광고 미리 로드
             .onAppear {
                 if !adManager.isAdLoaded {
                     adManager.loadAd()
@@ -199,26 +197,27 @@ struct UpgradeSheetView: View {
         
         let isMax = level >= maxLevel // 만렙 여부 확인
         
-        HStack {
+        HStack(spacing: 12) {
             Image(imageName)
                 .resizable()
                 .scaledToFit()
-                .frame(width: 60, height: 60)
+                .frame(width: 45, height: 45)
                 .background(Circle().fill(buttonColor.opacity(0.1)))
             
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.headline)
+                    .font(.subheadline)
+                    .bold()
                     .foregroundStyle(.primary)
                 
                 HStack {
                     Text(isMax ? "MAX" : "Lv.\(level)") // 만렙시 MAX 표시
-                        .font(.subheadline)
+                        .font(.caption)
                         .bold()
                         .foregroundStyle(.secondary)
                     Spacer()
                     Text("\(currentInvest) / \(totalCost)")
-                        .font(.caption)
+                        .font(.system(size: 10))
                         .monospacedDigit()
                         .foregroundStyle(.gray)
                 }
@@ -227,31 +226,34 @@ struct UpgradeSheetView: View {
                 ProgressView(value: isMax ? 1.0 : Double(currentInvest), total: isMax ? 1.0 : Double(totalCost))
                     .progressViewStyle(.linear)
                     .tint(isMax ? .orange : buttonColor)
+                    .scaleEffect(x: 1, y: 0.8, anchor: .center) //게이지 두께 얇게 조정
             }
             
             Spacer()
             
             Button(action: action) {
-                VStack {
+                VStack(spacing: 0) {
                     if isMax {
                         Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 14)) // 아이콘 크기 고정
                         Text("완료")
-                            .font(.caption2)
+                            .font(.system(size: 8)) // 텍스트 크기 고정
                             .bold()
                     } else if pref.isSuperUser {
                         Text("UP")
-                            .font(.headline)
+                            .font(.subheadline)
                             .bold()
                     } else {
                         Image(systemName: "drop.fill")
+                            //.font(.system(size: 12))
                         Text("10")
                             .font(.caption)
+//                            .font(.system(size: 10))
                             .bold()
                     }
                 }
-                .padding(.vertical, 4)
-                .padding(.horizontal, 10)
-                .frame(minWidth: 44)
+                .frame(width: 40, height: 40) // [수정] 버튼 크기 고정 (높이 축소)
+
             }
             .buttonStyle(.borderedProminent)
             .tint(isMax ? .gray : buttonColor) // 만렙시 회색 버튼
@@ -259,10 +261,11 @@ struct UpgradeSheetView: View {
             
             
         }
-        .padding()
+        .padding(.vertical, 10) // [수정] 상하 여백 축소
+        .padding(.horizontal, 12)
         .background(Color(uiColor: .secondarySystemGroupedBackground))
-        .cornerRadius(15)
-        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 2)
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.03), radius: 2, x: 0, y: 1)
     }
     
     func getCost(level: Int) -> Int {

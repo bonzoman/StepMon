@@ -243,6 +243,7 @@ struct ContentView: View {
     func calculateLifeWater(pref: UserPreference, currentSteps: Int) {
         let calendar = Calendar.current
         
+        // 날짜가 바뀌었으면 일일 획득량 초기화
         if !calendar.isDate(pref.lastAccessDate, inSameDayAs: Date()) {
             pref.dailyEarnedWater = 0
             pref.lastAccessDate = Date()
@@ -255,7 +256,7 @@ struct ContentView: View {
             let multiplier = 1.0
             
             let earned = Int(Double(diff) * efficiency * 0.1 * multiplier)
-            
+            // 중요: 생명수가 1방울이라도 만들어질 수 있을 때만 걸음 기록을 갱신합니다.
             if earned > 0 {
                 let availableSpace = maxDailyWater - pref.dailyEarnedWater
                 let finalEarned = min(earned, availableSpace)
@@ -263,12 +264,12 @@ struct ContentView: View {
                 if finalEarned > 0 {
                     pref.lifeWater += finalEarned
                     pref.dailyEarnedWater += finalEarned
-                    pref.lastCheckedSteps = currentSteps
                 }
-            } else {
+                // 생명수로 변환된 시점에만 마지막 체크 지점을 업데이트 (자투리 걸음 보존)
                 pref.lastCheckedSteps = currentSteps
             }
         } else if diff < 0 {
+            // 걸음 수 측정기가 리셋된 경우 등에 대비
             pref.lastCheckedSteps = currentSteps
         }
     }
