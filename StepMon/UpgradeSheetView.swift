@@ -6,12 +6,19 @@ import Combine
 struct UpgradeSheetView: View {
     @Environment(\.dismiss) var dismiss
     @Bindable var pref: UserPreference
-    @State private var isWatchingAd = false // 광고 시청 상태
+    
+    // [추가] 광고 매니저 연결 (@State로 선언하여 수명 주기 관리)
+    @State private var adManager = RewardedAdManager()
+    
+    @State private var isWatchingAd = false // 광고 시청 상태(로딩 인디케이터용)
     @State private var now = Date() // 쿨타임 실시간 갱신용
+    
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     let adRewardAmount = 50 // 광고 보상량
     let coolDownTime: TimeInterval = 600 // 10분 (600초)
-  
+    
+
+    
     // 상태에 따른 안내 문구 로직
     var statusMessage: String {
         if pref.isSuperUser {
@@ -52,10 +59,10 @@ struct UpgradeSheetView: View {
                             .font(.caption)
                         // 생명수가 부족하면 빨간색으로 경고, 아니면 회색
                             .foregroundStyle((!pref.isSuperUser && pref.lifeWater < 10) ? .red : .secondary)
-                            //.padding(.top, 5)
+                        //.padding(.top, 5)
                     }
                     //.padding(.top, 10)
-
+                    
                     
                     //Divider()
                     
@@ -115,6 +122,12 @@ struct UpgradeSheetView: View {
                     Button("닫기") { dismiss() }
                 }
             }
+            // [추가] 뷰 진입 시 광고 미리 로드
+            .onAppear {
+                if !adManager.isAdLoaded {
+                    adManager.loadAd()
+                }
+            }
         }
     }
     
@@ -123,43 +136,62 @@ struct UpgradeSheetView: View {
         let lastAd = pref.lastAdDate ?? Date.distantPast
         let timeElapsed = now.timeIntervalSince(lastAd)
         let isCoolDownActive = timeElapsed < coolDownTime
-
+        
+        // 광고가 로드되었는지 여부
+        let isLoaded = adManager.isAdLoaded
+        
         return VStack(spacing: 0) {
-            Divider() // 구분선
+            Divider()
             
             VStack(spacing: 8) {
-                Button(action: { simulateAdReward() }) {
+                // [수정] 로드 실패 시 재시도 할 수 있도록 분기 처리
+                Button(action: {
+                    if isLoaded {
+                        showRealAd() // 로드됨 -> 광고 시청
+                    } else {
+                        adManager.loadAd() // 로드 안됨 -> 재시도 요청
+                    }
+                }) {
                     HStack {
                         if isWatchingAd {
                             ProgressView().tint(.white).padding(.trailing, 5)
-                            Text("광고 시청 중...")
+                            Text("광고 준비 중...")
                         } else if isCoolDownActive {
                             let remaining = Int(coolDownTime - timeElapsed)
                             Image(systemName: "timer")
-                            Text("(광고) \(remaining / 60)분 \(remaining % 60)초")
-                        } else {
+                            Text("(쿨타임) \(remaining / 60)분 \(remaining % 60)초")
+                        } else if isLoaded {
+                            // [상태 1] 광고 준비 완료
                             Image(systemName: "play.tv.fill")
                             Text("광고 보고 \(adRewardAmount) 💧 받기")
+                        } else {
+                            // [상태 2] 로드 실패 또는 로딩 중 (버튼 활성화해서 재시도 유도)
+                            Image(systemName: "arrow.clockwise")
+                            Text("광고 불러오기 (눌러서 재시도)")
                         }
                     }
                     .font(.headline)
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(isWatchingAd || isCoolDownActive ? Color.gray : Color.blue)
+                    // 버튼 색상: 로드됨(파랑) vs 로드안됨(주황/회색) vs 쿨타임(회색)
+                    .background(
+                        isCoolDownActive ? Color.gray :
+                            (isLoaded ? Color.blue : Color.orange) // 로드 안됐으면 주황색으로 강조
+                    )
                     .cornerRadius(12)
                 }
-                .disabled(isWatchingAd || isCoolDownActive)
+                // 쿨타임이거나 시청 중일 때만 비활성화 (로드 실패 시에는 클릭 가능해야 함)
+                .disabled(isCoolDownActive || isWatchingAd)
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
-                .padding(.bottom, 12) // 기본 패딩만 주면 시스템이 알아서 하단 홈 바(Safe Area)와 겹치지 않게 밀어줍니다.
+                .padding(.bottom, 12)
             }
-            .background(.ultraThinMaterial) // 반투명 배경으로 리스트가 비쳐 보이게 처리
+            .background(.ultraThinMaterial)
         }
         .transition(.move(edge: .bottom))
         .onReceive(timer) { _ in self.now = Date() }
     }
-    
     
     // UpgradeRow 컴포넌트
     @ViewBuilder
@@ -224,8 +256,8 @@ struct UpgradeSheetView: View {
             .buttonStyle(.borderedProminent)
             .tint(isMax ? .gray : buttonColor) // 만렙시 회색 버튼
             .disabled(isMax || (!pref.isSuperUser && pref.lifeWater < 10)) // 만렙시 비활성화
-
-
+            
+            
         }
         .padding()
         .background(Color(uiColor: .secondarySystemGroupedBackground))
@@ -292,28 +324,37 @@ struct UpgradeSheetView: View {
         generator.notificationOccurred(.success)
     }
     
-    // 버튼 색상 결정 함수
-    private func getButtonColor(_ watching: Bool, _ cooling: Bool) -> Color {
-        if watching || cooling { return .gray }
-        return .blue
-    }
-
-    // 광고 시청 시뮬레이션 함수
-    private func simulateAdReward() {
-        isWatchingAd = true
+    
+    // [변경] 실제 광고 표시 함수
+    private func showRealAd() {
+        // 이미 광고 시청 시도 중이면 중복 실행 방지
+        guard !isWatchingAd else { return }
         
-        // 20년 차 선배님께 익숙한 비동기 처리 (3초 후 보상)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            pref.lifeWater += adRewardAmount
-            
-            //광고 시청 시간 기록 (이게 있어야 쿨타임이 작동합니다)
-            pref.lastAdDate = Date()
-            
-            isWatchingAd = false
-            
-            // 햅틱 피드백 추가
-            let generator = UINotificationFeedbackGenerator()
-            generator.notificationOccurred(.success)
+        isWatchingAd = true // 버튼 비활성화 및 로딩 표시
+        
+        adManager.showAd {
+            // 보상 지급 콜백
+            self.giveReward()
+            self.isWatchingAd = false
+        }
+        
+        // [안전장치] 만약 광고 호출 자체가 실패했을 경우를 대비해 2초 후 강제 해제
+        // (정상 실행 시에는 adManager의 delegate에서 상태를 관리하게 됩니다)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            if self.isWatchingAd {
+                self.isWatchingAd = false
+            }
         }
     }
+    
+    // [추가] 보상 지급 로직 분리
+    private func giveReward() {
+        pref.lifeWater += adRewardAmount
+        pref.lastAdDate = Date()
+        self.now = Date() // 뷰 즉시 갱신
+        
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+    }
+    
 }

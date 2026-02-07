@@ -47,36 +47,21 @@ struct GameResourceManager {
     
     // 현재 이미지가 유지되는 구간 안에서 몇 % 성장했는지 (0.0 ~ 0.99)
     // 이 값을 GardenView에서 scaleEffect에 사용하여 나무를 조금씩 키움
-//    static func getLevelProgressInStep(level: Int) -> Double {
-//        switch level {
-//        case 0..<30:
-//            // 10레벨 동안 0.0 -> 1.0 도달
-//            return Double(level % 10) / 10.0
-//        case 30..<60:
-//            // 5레벨 동안 0.0 -> 1.0 도달
-//            return Double((level - 30) % 5) / 5.0
-//        default:
-//            // 3레벨 동안 0.0 -> 1.0 도달
-//            return Double((level - 60) % 3) / 3.0
-//        }
-//    }
+    //    static func getLevelProgressInStep(level: Int) -> Double {
+    //        switch level {
+    //        case 0..<30:
+    //            // 10레벨 동안 0.0 -> 1.0 도달
+    //            return Double(level % 10) / 10.0
+    //        case 30..<60:
+    //            // 5레벨 동안 0.0 -> 1.0 도달
+    //            return Double((level - 30) % 5) / 5.0
+    //        default:
+    //            // 3레벨 동안 0.0 -> 1.0 도달
+    //            return Double((level - 60) % 3) / 3.0
+    //        }
+    //    }
     
-    // --- [팝업용 아이콘 (기존 유지)] ---
-    static func getTreeImageName(level: Int) -> String {
-        switch level {
-        case 0...29: return "tree_phase_1"
-        case 30...59: return "tree_phase_2"
-        default: return "tree_phase_3"
-    }
-    }
-    
-    static func getWorkerImageName(level: Int) -> String {
-        switch level {
-        case 0...29: return "worker_phase_1"
-        case 30...59: return "worker_phase_2"
-        default: return "worker_phase_3"
-        }
-    }
+
     
     // 효율 계산 (기존 유지)
     static func getWorkerEfficiency(level: Int) -> Double {

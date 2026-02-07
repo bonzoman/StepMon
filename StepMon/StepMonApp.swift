@@ -1,10 +1,14 @@
 import SwiftUI
 import SwiftData
 import UserNotifications
+import GoogleMobileAds // AdMob 임포트 추가
 
 // 1. 앱이 켜져있을 때 알림 처리를 위한 AppDelegate 클래스 정의
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+
+        MobileAds.shared.start(completionHandler: nil) //AdMob SDK 초기화
+
         UNUserNotificationCenter.current().delegate = self
         return true
     }

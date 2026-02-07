@@ -245,7 +245,6 @@ struct ContentView: View {
         
         if !calendar.isDate(pref.lastAccessDate, inSameDayAs: Date()) {
             pref.dailyEarnedWater = 0
-            pref.lastCheckedSteps = 0
             pref.lastAccessDate = Date()
         }
         
