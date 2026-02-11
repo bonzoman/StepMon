@@ -106,7 +106,7 @@ class BackgroundStepManager {
                     )
                     writeContext.insert(history)
                     
-                    // 100개 유지 Pruning
+                    // 30개 유지 Pruning
                     let historyFetch = FetchDescriptor<NotificationHistory>(sortBy: [SortDescriptor(\.timestamp, order: .reverse)])
                     if let allHistory = try? writeContext.fetch(historyFetch), allHistory.count > 30 {
                         for i in 30..<allHistory.count {
@@ -148,8 +148,8 @@ class BackgroundStepManager {
     
     private func sendNotification(steps: Int, threshold: Int) {
         let content = UNMutableNotificationContent()
-        content.title = "⚠️ 움직임 부족"
-        content.body = "목표: \(threshold)보 / 현재: \(steps)보. 잠시 걸어보세요!"
+        content.title = String(localized: "⚠️ 움직임 부족")
+        content.body = String(localized:"최근: \(steps)보. 걷고 💧생명수를 채워주세요!")
         content.sound = .default
         
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)

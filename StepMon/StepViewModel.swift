@@ -63,7 +63,7 @@ class StepViewModel {
     }
     
     private func updateWidget(steps: Int) {
-        if let sharedDefaults = UserDefaults(suiteName: "group.com.bnz.StepMon") {
+        if let sharedDefaults = UserDefaults(suiteName: "group.com.bnz.stepmon") {
             sharedDefaults.set(steps, forKey: "widgetSteps")
             // WidgetCenter 호출은 시스템 자원을 많이 소모하므로 꼭 필요한 때만 실행
             WidgetCenter.shared.reloadAllTimelines()

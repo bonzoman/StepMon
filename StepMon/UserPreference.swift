@@ -27,6 +27,19 @@ class UserPreference {
     var isNotificationEnabled: Bool = false // 알림 마스터 스위치 상태
     var lastWinDate: Date? = nil // 마지막 대박 당첨 시간
     var lastAdDate: Date? = nil // 마지막 광고 시청 시간
+
+    // 나중에 사용할 용됴
+    var fcmToken: String? = nil //FCM 토큰
+    var vs1: String? = nil
+    var vs2: String? = nil
+    var vs3: String? = nil
+    var vs4: String? = nil
+    var vs5: String? = nil
+    var vs6: String? = nil
+    var vs7: String? = nil
+    var vs8: String? = nil
+    var vs9: String? = nil
+
     
     // 슈퍼유저 판별 로직
     var isSuperUser: Bool {

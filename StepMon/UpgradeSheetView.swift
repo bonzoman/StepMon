@@ -8,7 +8,7 @@ struct UpgradeSheetView: View {
     @Bindable var pref: UserPreference
     
     // [추가] 광고 매니저 연결 (@State로 선언하여 수명 주기 관리)
-    @State private var adManager = RewardedAdManager()
+    private let adManager = RewardedAdManager.shared
     
     @State private var isWatchingAd = false // 광고 시청 상태(로딩 인디케이터용)
     @State private var now = Date() // 쿨타임 실시간 갱신용
@@ -165,7 +165,7 @@ struct UpgradeSheetView: View {
                         } else {
                             // [상태 2] 로드 실패 또는 로딩 중 (버튼 활성화해서 재시도 유도)
                             Image(systemName: "arrow.clockwise")
-                            Text("광고 불러오기 (눌러서 재시도)")
+                            Text("광고 불러오기")
                         }
                     }
                     .font(.headline)

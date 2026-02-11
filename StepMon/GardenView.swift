@@ -145,7 +145,7 @@ struct GardenView: View {
                 VStack(spacing: 10) {
                     Text("Lv.\(pref.treeLevel) 생명의 숲")
                         .font(.system(.headline, design: .rounded))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.black.opacity(0.6))
                     
                     Button(action: { showUpgradeSheet = true }) {
                         Label("가꾸기", systemImage: "leaf.fill")

@@ -22,7 +22,7 @@ class RewardedAdManager: NSObject {
     
     override init() {
         super.init()
-
+        
         #if DEBUG
         // 개발(Debug) 모드일 때만 테스트 기기 ID를 등록합니다.
         // 앱스토어 출시용(Release) 빌드에서는 이 코드가 아예 컴파일되지 않습니다.
@@ -35,9 +35,7 @@ class RewardedAdManager: NSObject {
     }
     
     func loadAd() {
-        
-
-        
+                
         let request = Request()
         
         RewardedAd.load(with: adUnitID, request: request) { [weak self] ad, error in

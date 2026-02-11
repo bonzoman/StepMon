@@ -184,9 +184,10 @@ struct ContentView: View {
                             .clipShape(Capsule())
                             // [핵심] 생명수 변화 감지 로직
                             .onChange(of: pref.lifeWater) { old, new in
-                                let diff = new - old
+                                //let diff = new - old
                                 // 보상이 10 이상(대박 당첨)일 때만 작동
-                                if diff >= 30 {
+                                //if diff >= 30 {
+                                if new > old { // 30 이상 조건 삭제, 1이라도 증가하면 실행
                                     triggerHeaderPulse()
                                 }
                             }
@@ -247,15 +248,20 @@ struct ContentView: View {
         if !calendar.isDate(pref.lastAccessDate, inSameDayAs: Date()) {
             pref.dailyEarnedWater = 0
             pref.lastAccessDate = Date()
+            
+            // 어제 총량(예: 1만보)보다 현재(오늘 아침: 500보)가 적다면움직임 부족
+            // 기준점을 0으로 잡아서 오늘 아침에 걸은 500보를 온전히 계산에 포함시킵니다.
+            if currentSteps < pref.lastCheckedSteps {
+                pref.lastCheckedSteps = 0
+            }
         }
         
         let diff = currentSteps - pref.lastCheckedSteps
         
         if diff > 0 {
             let efficiency = GameResourceManager.getWorkerEfficiency(level: pref.workerLevel)
-            let multiplier = 1.0
             
-            let earned = Int(Double(diff) * efficiency * 0.1 * multiplier)
+            let earned = Int(Double(diff) * efficiency * 0.1)
             // 중요: 생명수가 1방울이라도 만들어질 수 있을 때만 걸음 기록을 갱신합니다.
             if earned > 0 {
                 let availableSpace = maxDailyWater - pref.dailyEarnedWater

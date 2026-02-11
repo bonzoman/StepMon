@@ -10,7 +10,7 @@ import SwiftUI
 import WidgetKit
 
 struct StepMonWidgetControl: ControlWidget {
-    static let kind: String = "bnz.StepMon.StepMonWidget"
+    static let kind: String = "bnzsStepmon.StepMonWidget"
 
     var body: some ControlWidgetConfiguration {
         AppIntentControlConfiguration(

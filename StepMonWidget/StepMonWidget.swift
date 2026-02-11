@@ -12,7 +12,7 @@ import CoreMotion // [필수] 센서 접근을 위해 추가
 
 struct Provider: TimelineProvider {
     // App Group ID
-    let appGroupId = "group.com.bnz.StepMon"
+    let appGroupId = "group.com.bnz.stepmon"
     
     // [추가] 위젯이 직접 센서에 접근하기 위한 객체
     let pedometer = CMPedometer()
