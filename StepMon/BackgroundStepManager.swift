@@ -7,7 +7,8 @@ import CoreMotion
 class BackgroundStepManager {
     static let shared = BackgroundStepManager()
     let taskId = "bnz.stepmon.stepcheck.refresh"
-    private let lastScheduledKey = "bnz.stepmon.lastScheduledDate" // 예약 시간 저장용 키
+    private let lastSubmitKey = "bnz.stepmon.bg.lastSubmitDate"
+    private let submitThrottleSeconds: TimeInterval = 5 * 60
     
     private let center = UNUserNotificationCenter.current()
     var modelContainer: ModelContainer?
@@ -22,44 +23,68 @@ class BackgroundStepManager {
         }
     }
     
-    // [수정] 중복 예약 방지 로직이 추가된 스케줄링 함수
+    
+    // [수정] getTaskRequests를 사용하는 스케줄링 함수
     func scheduleAppRefresh(force: Bool = false) {
-        // 1. 이미 예약된 시간이 미래에 있다면 건너뜀 (밀림 방지)
-        if !force {
-            if let lastDate = UserDefaults.standard.object(forKey: lastScheduledKey) as? Date,
-               lastDate > Date() {
-                print("⏳ 이미 예약된 작업이 있습니다: \(lastDate.formatted(date: .omitted, time: .shortened))")
+        // submit()을 너무 자주 호출하면 오히려 실행 기회가 줄거나 에러가 날 수 있어서 throttling 처리
+        if !force, let last = UserDefaults.standard.object(forKey: lastSubmitKey) as? Date {
+            let delta = Date().timeIntervalSince(last)
+            if delta < submitThrottleSeconds {
+                let remain = Int((submitThrottleSeconds - delta).rounded(.up))
+                print("⏳ submit throttle: \(remain)s 후 재시도 권장")
                 return
             }
         }
-        
-        let nextDate = Date(timeIntervalSinceNow: 15 * 60)
-        let request = BGAppRefreshTaskRequest(identifier: taskId)
-        // [유지] 체크는 15분마다 최대한 자주 수행
-        request.earliestBeginDate = nextDate
-        
-        do {
-            try BGTaskScheduler.shared.submit(request)
-            // 2. 예약 성공 시 해당 시간을 저장
-            UserDefaults.standard.set(nextDate, forKey: lastScheduledKey)
-            print("✅ 차기 체크 예약 완료: \(nextDate.formatted(date: .omitted, time: .shortened))")
-        } catch {
-            print("❌ 스케줄링 실패: \(error)")
+
+        // 비동기적으로 현재 대기 중인 작업 목록을 가져옴
+        BGTaskScheduler.shared.getPendingTaskRequests { [weak self] (requests: [BGTaskRequest]) in
+            guard let self = self else { return }
+
+            // 1) 이미 pending 상태라면(그리고 force가 아니라면) 재등록하지 않음
+            let pending = requests.first(where: { $0.identifier == self.taskId })
+            if pending != nil && !force {
+                let scheduledTime = pending?.earliestBeginDate?.formatted(date: .omitted, time: .shortened) ?? "알 수 없음"
+                print("⏳ 이미 예약된 작업이 대기 중입니다. (예정: \(scheduledTime))")
+                return
+            }
+
+            // 2) 예약 진행
+            let nextDate = Date(timeIntervalSinceNow: 15 * 60) // 15분 뒤(최소 실행 가능 시점)
+            let request = BGAppRefreshTaskRequest(identifier: self.taskId)
+            request.earliestBeginDate = nextDate
+
+            do {
+                try BGTaskScheduler.shared.submit(request)
+                UserDefaults.standard.set(Date(), forKey: self.lastSubmitKey)
+                print("✅ 차기 체크 예약 완료: \(nextDate.formatted(date: .omitted, time: .shortened))")
+            } catch {
+                print("❌ 스케줄링 실패: \(error)")
+            }
         }
     }
+
     
     private func handleAppRefresh(task: BGAppRefreshTask) {
-        task.expirationHandler = {
-            task.setTaskCompleted(success: false)
-        }
-        
-        checkStepsAndNotify { success in
+        var didComplete = false
+
+        func completeOnce(success: Bool) {
+            guard !didComplete else { return }
+            didComplete = true
             task.setTaskCompleted(success: success)
-            // 성공/실패 여부와 관계없이 다음 스케줄링 등록
-            // [수정] 백그라운드 작업 완료 후에는 'force: true'로 무조건 다음 릴레이 예약
-            self.scheduleAppRefresh(force: true)
+            // 작업 종료 후 다음 작업 예약 (과도한 force/cancel 대신 throttle + pending 체크로 관리)
+            self.scheduleAppRefresh()
+        }
+
+        task.expirationHandler = {
+            // 시스템이 시간을 더 못 주는 상황: 여기서 1회만 완료 처리
+            completeOnce(success: false)
+        }
+
+        checkStepsAndNotify { success in
+            completeOnce(success: success)
         }
     }
+
     
     private func checkStepsAndNotify(completion: @escaping (Bool) -> Void) {
         guard let container = modelContainer else {
