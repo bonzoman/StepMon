@@ -43,8 +43,8 @@ struct StepMonitorApp: App {
             BackgroundStepManager.shared.registerBackgroundTask(container: container)
             
             // ✅ 앱 시작 시 1회: 포그라운드 방식(pending 체크 후 submit)
-            BackgroundStepManager.shared.scheduleAppRefreshForeground(reason: "app_init")
-            AppLog.write("✅ app_init schedule FG")
+            //BackgroundStepManager.shared.scheduleAppRefreshForeground(reason: "app_init")
+            BackgroundStepManager.shared.runForegroundCheckIfNeeded(reason: "app_init")
             
         } catch {
             fatalError("Failed to create ModelContainer: \(error)")

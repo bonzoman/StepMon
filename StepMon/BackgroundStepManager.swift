@@ -28,8 +28,22 @@ final class BackgroundStepManager {
 
     // ✅ BG submit "earliest 밀림" 방지용 가드 (추천: 10~15분)
     private let lastBgSubmitKey = "bnz.stepmon.lastBgSubmitDate"
-    private let bgResubmitGuardSeconds: TimeInterval = 16 * 60
+    private let bgResubmitGuardSeconds: TimeInterval = 3 * 60
 
+    // ✅ BG pending 조회 자체 과다 호출 방지 (1~2분 추천)
+    private let lastBgCheckKey = "bnz.stepmon.lastBgCheckDate"
+    private let bgCheckThrottleSeconds: TimeInterval = 90
+    
+    private let lastNotiSentKey = "bnz.stepmon.lastNotiSentDate"
+    private let notiCooldownSeconds: TimeInterval = 15 * 60   // 15분동안 1번만 알림 받기위해
+
+    // ✅ FG 즉시 체크 과다 호출 방지 (추천 30~60초)
+    private let lastFgCheckKey = "bnz.stepmon.lastFgCheckDate"
+    private let fgCheckCooldownSeconds: TimeInterval = 60
+
+    // ✅ 중복 실행 방지
+    private var isFgChecking = false
+    
     private init() {}
 
     // MARK: - Register
@@ -47,38 +61,77 @@ final class BackgroundStepManager {
 
     // MARK: - Public Schedulers
 
-    /// 포그라운드: pending 체크 후 submit
-    func scheduleAppRefreshForeground(reason: String = "foreground") {
-        AppLog.write("🟢 schedule FG called (\(reason))")
-        guard throttleOK() else {
-            AppLog.write("🟢 FG throttled")
+    
+    /// 포그라운드에서 즉시 체크 (submit 하지 않음)
+    func runForegroundCheckIfNeeded(reason: String = "scene_active") {
+        // 쿨다운
+        if let last = UserDefaults.standard.object(forKey: lastFgCheckKey) as? Date {
+            let delta = Date().timeIntervalSince(last)
+            if delta < fgCheckCooldownSeconds {
+                AppLog.write("🟢 FG check cooldown \(Int(delta))s/\(Int(fgCheckCooldownSeconds))s")
+                return
+            }
+        }
+
+        // 중복 실행 방지
+        if isFgChecking {
+            AppLog.write("🟢 FG check skipped (already running)")
             return
         }
 
-        BGTaskScheduler.shared.getPendingTaskRequests { requests in
-            let already = requests.contains(where: { $0.identifier == self.taskId })
-            AppLog.write("🟢 FG pendingCount=\(requests.count) already=\(already)")
+        isFgChecking = true
+        UserDefaults.standard.set(Date(), forKey: lastFgCheckKey)
 
-            if already { return }
-            let ok = self.submitRefreshRequest(path: "FG")
-            if !ok {
-                AppLog.write("🟢 FG submit failed")
-            }
+        AppLog.write("🟢 FG CHECK START (\(reason))")
+
+        checkStepsAndNotify { success in
+            AppLog.write("🟢 FG CHECK END success=\(success)")
+            self.isFgChecking = false
         }
     }
 
-    /// 백그라운드
-    /// ✅ 단, BG는 자주 submit하면 earliest가 계속 리셋될 수 있으니 별도 가드 적용
+    
+    
+    /// 포그라운드 스케쥴은 미사용(ContentView)
+//    func scheduleAppRefreshForeground(reason: String = "foreground") {
+//        AppLog.write("🟢 schedule FG called (\(reason))")
+//        guard throttleOK() else {
+//            AppLog.write("🟢 FG throttled")
+//            return
+//        }
+//
+//        BGTaskScheduler.shared.getPendingTaskRequests { requests in
+//            let already = requests.contains(where: { $0.identifier == self.taskId })
+//            AppLog.write("🟢 FG pendingCount=\(requests.count) already=\(already)")
+//
+//            if already { return }
+//            let ok = self.submitRefreshRequest(path: "FG")
+//            if !ok {
+//                AppLog.write("🟢 FG submit failed")
+//            }
+//        }
+//    }
+
     func scheduleAppRefreshBackground(reason: String = "background") {
         AppLog.write("🟠 schedule BG called (\(reason))")
 
-        // (1) 짧은 throttle(30초)도 유지해도 되지만, 핵심은 아래 BG 가드임
+        // (0) ✅ BG pending 조회 호출 자체를 90초로 제한 (로그/배터리 절약)
+        if let last = UserDefaults.standard.object(forKey: lastBgCheckKey) as? Date {
+            let delta = Date().timeIntervalSince(last)
+            if delta < bgCheckThrottleSeconds {
+                AppLog.write("🟠 BG check throttled delta=\(Int(delta))s")
+                return
+            }
+        }
+        UserDefaults.standard.set(Date(), forKey: lastBgCheckKey)
+
+        // (1) 짧은 throttle(30초)
         guard throttleOK() else {
             AppLog.write("🟠 BG throttled(30s)")
             return
         }
 
-        // (2) ✅ BG 전용 가드: 마지막 BG submit 후 16분 이내면 submit 스킵
+        // (2) ✅ BG 전용 가드
         if let last = UserDefaults.standard.object(forKey: lastBgSubmitKey) as? Date {
             let delta = Date().timeIntervalSince(last)
             if delta < bgResubmitGuardSeconds {
@@ -87,48 +140,44 @@ final class BackgroundStepManager {
             }
         }
 
-        // ✅ (3) suspend 대비: 짧게 백그라운드 실행시간 확보
-        var bgTask: UIBackgroundTaskIdentifier = .invalid
-        bgTask = UIApplication.shared.beginBackgroundTask(withName: "StepMon_BG_Submit") {
-            // 만약 여기로 오면 시간이 끝난 거라 제출 포기
-            if bgTask != .invalid {
-                AppLog.write("🟠 ⏰ BGTask time expired → endBackgroundTask")
-                UIApplication.shared.endBackgroundTask(bgTask)
-                bgTask = .invalid
-            }
-        }
-        
-        
-        // ✅ (4) BG에서도 pending 있으면 submit 금지 (earliest 밀림 방지)
+        // (3) ✅ 먼저 pending만 확인 (여기선 beginBackgroundTask 안 함)
         BGTaskScheduler.shared.getPendingTaskRequests { requests in
-            defer {
-                if bgTask != .invalid {
-                    AppLog.write("🟠 endBackgroundTask (cleanup)")
-                    UIApplication.shared.endBackgroundTask(bgTask)
-                    bgTask = .invalid
-                }
-            }
-
             let already = requests.contains(where: { $0.identifier == self.taskId })
             AppLog.write("🟠 BG pendingCount=\(requests.count) already=\(already)")
 
             if already {
-                // pending이 있으면 절대 재-submit 하지 않음 (earliest 리셋 방지)
+                // ✅ pending이 있으면 submit도 안 하고, begin/endBackgroundTask도 안 함
                 return
             }
 
-            let ok = self.submitRefreshRequest(path: "BG")
-            if ok {
-                UserDefaults.standard.set(Date(), forKey: self.lastBgSubmitKey)
-            } else {
-                AppLog.write("🟠 BG submit failed → lastBgSubmitDate not updated")
+            // (4) ✅ pending이 없을 때만 suspend 대비로 beginBackgroundTask 사용
+            DispatchQueue.main.async {
+                var bgTask: UIBackgroundTaskIdentifier = .invalid
+                bgTask = UIApplication.shared.beginBackgroundTask(withName: "StepMon_BG_Submit") {
+                    if bgTask != .invalid {
+                        AppLog.write("⏰ BGTask expired → endBackgroundTask")
+                        UIApplication.shared.endBackgroundTask(bgTask)
+                        bgTask = .invalid
+                    }
+                }
+
+                let ok = self.submitRefreshRequest(path: "BG")
+                if ok {
+                    UserDefaults.standard.set(Date(), forKey: self.lastBgSubmitKey)
+                } else {
+                    AppLog.write("🟠 BG submit failed → lastBgSubmitDate not updated")
+                }
+
+                if bgTask != .invalid {
+                    AppLog.write("✅ endBackgroundTask (cleanup)")
+                    UIApplication.shared.endBackgroundTask(bgTask)
+                    bgTask = .invalid
+                }
             }
-            
-            UIApplication.shared.endBackgroundTask(bgTask)
-            bgTask = .invalid
-            
         }
     }
+
+    
 
     // MARK: - BG Task Handler
     private func handleAppRefresh(task: BGAppRefreshTask) {
@@ -241,8 +290,14 @@ final class BackgroundStepManager {
                 try writeContext.save()
                 AppLog.write("✅ history saved steps=\(steps) notified=\(shouldNotify)", .red)
 
+                //알림 조건에 충족하더라도 15분동안 1번만 알림 보낸다!
                 if shouldNotify {
-                    self.sendNotification(steps: steps, threshold: threshold)
+                    if self.notificationCooldownOK(now: now) {
+                        self.sendNotification(steps: steps, threshold: threshold)
+                        UserDefaults.standard.set(now, forKey: self.lastNotiSentKey)
+                    } else {
+                        AppLog.write("⛔️ notification skipped (cooldown)")
+                    }
                 }
 
                 completion(true)
@@ -336,4 +391,13 @@ final class BackgroundStepManager {
         f.timeZone = .current
         return f.string(from: date)
     }
+
+    private func notificationCooldownOK(now: Date) -> Bool {
+        if let last = UserDefaults.standard.object(forKey: lastNotiSentKey) as? Date {
+            let delta = now.timeIntervalSince(last)
+            return delta >= notiCooldownSeconds
+        }
+        return true
+    }
+
 }
