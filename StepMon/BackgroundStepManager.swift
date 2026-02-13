@@ -13,6 +13,7 @@ import BackgroundTasks
 import UserNotifications
 import SwiftData
 import CoreMotion
+import UIKit
 
 final class BackgroundStepManager {
     static let shared = BackgroundStepManager()
@@ -27,7 +28,7 @@ final class BackgroundStepManager {
 
     // ✅ BG submit "earliest 밀림" 방지용 가드 (추천: 10~15분)
     private let lastBgSubmitKey = "bnz.stepmon.lastBgSubmitDate"
-    private let bgResubmitGuardSeconds: TimeInterval = 10 * 60
+    private let bgResubmitGuardSeconds: TimeInterval = 16 * 60
 
     private init() {}
 
@@ -41,7 +42,7 @@ final class BackgroundStepManager {
             self.handleAppRefresh(task: task)
         }
 
-        AppLog.write("✅ registerBackgroundTask done")
+        AppLog.write("✅ registerBackgroundTask done", .red)
     }
 
     // MARK: - Public Schedulers
@@ -66,7 +67,7 @@ final class BackgroundStepManager {
         }
     }
 
-    /// 백그라운드: pending 체크 없이 즉시 submit
+    /// 백그라운드
     /// ✅ 단, BG는 자주 submit하면 earliest가 계속 리셋될 수 있으니 별도 가드 적용
     func scheduleAppRefreshBackground(reason: String = "background") {
         AppLog.write("🟠 schedule BG called (\(reason))")
@@ -77,7 +78,7 @@ final class BackgroundStepManager {
             return
         }
 
-        // (2) ✅ BG 전용 가드: 마지막 BG submit 후 12분 이내면 submit 스킵
+        // (2) ✅ BG 전용 가드: 마지막 BG submit 후 16분 이내면 submit 스킵
         if let last = UserDefaults.standard.object(forKey: lastBgSubmitKey) as? Date {
             let delta = Date().timeIntervalSince(last)
             if delta < bgResubmitGuardSeconds {
@@ -86,17 +87,52 @@ final class BackgroundStepManager {
             }
         }
 
-        let ok = submitRefreshRequest(path: "BG")
-        if ok {
-            UserDefaults.standard.set(Date(), forKey: lastBgSubmitKey)
-        } else {
-            AppLog.write("🟠 BG submit failed → lastBgSubmitDate not updated")
+        // ✅ (3) suspend 대비: 짧게 백그라운드 실행시간 확보
+        var bgTask: UIBackgroundTaskIdentifier = .invalid
+        bgTask = UIApplication.shared.beginBackgroundTask(withName: "StepMon_BG_Submit") {
+            // 만약 여기로 오면 시간이 끝난 거라 제출 포기
+            if bgTask != .invalid {
+                AppLog.write("🟠 ⏰ BGTask time expired → endBackgroundTask")
+                UIApplication.shared.endBackgroundTask(bgTask)
+                bgTask = .invalid
+            }
+        }
+        
+        
+        // ✅ (4) BG에서도 pending 있으면 submit 금지 (earliest 밀림 방지)
+        BGTaskScheduler.shared.getPendingTaskRequests { requests in
+            defer {
+                if bgTask != .invalid {
+                    AppLog.write("🟠 endBackgroundTask (cleanup)")
+                    UIApplication.shared.endBackgroundTask(bgTask)
+                    bgTask = .invalid
+                }
+            }
+
+            let already = requests.contains(where: { $0.identifier == self.taskId })
+            AppLog.write("🟠 BG pendingCount=\(requests.count) already=\(already)")
+
+            if already {
+                // pending이 있으면 절대 재-submit 하지 않음 (earliest 리셋 방지)
+                return
+            }
+
+            let ok = self.submitRefreshRequest(path: "BG")
+            if ok {
+                UserDefaults.standard.set(Date(), forKey: self.lastBgSubmitKey)
+            } else {
+                AppLog.write("🟠 BG submit failed → lastBgSubmitDate not updated")
+            }
+            
+            UIApplication.shared.endBackgroundTask(bgTask)
+            bgTask = .invalid
+            
         }
     }
 
     // MARK: - BG Task Handler
     private func handleAppRefresh(task: BGAppRefreshTask) {
-        AppLog.write("🚀 BG START")
+        AppLog.write("🚀 BG START", .red)
 
         let finishLock = NSLock()
         var finished = false
@@ -167,7 +203,7 @@ final class BackgroundStepManager {
         let now = Date()
         let startDate = now.addingTimeInterval(-interval)
 
-        AppLog.write("🔍 querySteps (\(readPref.checkIntervalMinutes)m) start=\(startDate) end=\(now)")
+        AppLog.write("🔍 querySteps (\(readPref.checkIntervalMinutes)m) start=\(formatLocal(startDate)) end=\(formatLocal(now))", .red)
 
         CoreMotionManager.shared.querySteps(from: startDate, to: now) { steps in
             // ✅ BG에서도 안정적으로: 콜백 안에서 바로 저장
@@ -203,7 +239,7 @@ final class BackgroundStepManager {
                 }
 
                 try writeContext.save()
-                AppLog.write("✅ history saved steps=\(steps) notified=\(shouldNotify)")
+                AppLog.write("✅ history saved steps=\(steps) notified=\(shouldNotify)", .red)
 
                 if shouldNotify {
                     self.sendNotification(steps: steps, threshold: threshold)
@@ -211,7 +247,7 @@ final class BackgroundStepManager {
 
                 completion(true)
             } catch {
-                AppLog.write("❌ save failed: \(error)")
+                AppLog.write("❌ save failed: \(error)", .red)
                 completion(false)
             }
         }
@@ -248,9 +284,9 @@ final class BackgroundStepManager {
 
         center.add(request) { error in
             if let error = error {
-                AppLog.write("❌ notification add error: \(error)")
+                AppLog.write("❌ notification add error: \(error)", .red)
             } else {
-                AppLog.write("✅ notification posted")
+                AppLog.write("✅ notification posted", .red)
             }
         }
     }
@@ -267,9 +303,9 @@ final class BackgroundStepManager {
             UserDefaults.standard.set(Date(), forKey: lastSubmitKey)
 
             if let earliest = request.earliestBeginDate {
-                AppLog.write("✅ submit success [\(path)] earliest=\(formatLocal(earliest))")
+                AppLog.write("✅ submit success [\(path)] earliest=\(formatLocal(earliest))", .red)
             } else {
-                AppLog.write("✅ submit success [\(path)] earliest=nil")
+                AppLog.write("✅ submit success [\(path)] earliest=nil", .red)
             }
 
             BGTaskScheduler.shared.getPendingTaskRequests { reqs in
@@ -295,7 +331,7 @@ final class BackgroundStepManager {
 
     private func formatLocal(_ date: Date) -> String {
         let f = DateFormatter()
-        f.dateFormat = "yy.MM.dd HH:mm:ss"
+        f.dateFormat = "yyyy.MM.dd HH:mm:ss"
         f.locale = Locale(identifier: "ko_KR")
         f.timeZone = .current
         return f.string(from: date)

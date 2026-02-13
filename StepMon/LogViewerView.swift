@@ -2,23 +2,23 @@ import SwiftUI
 import UIKit
 
 struct LogViewerView: View {
-    @State private var text: String = ""
+    @State private var text: AttributedString = ""
 
     var body: some View {
         VStack(spacing: 12) {
             ScrollView {
-                Text(text.isEmpty ? "로그 없음" : text)
+                Text(text.characters.isEmpty ? AttributedString("로그 없음") : text)
                     .font(.system(.footnote, design: .monospaced))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding()
-                    .textSelection(.enabled) // ✅ 블록 선택/복사 가능
+                    .textSelection(.enabled)
             }
 
             HStack(spacing: 12) {
                 Button("새로고침") { reload() }
 
                 Button("전체 복사") {
-                    UIPasteboard.general.string = text
+                    UIPasteboard.general.string = String(text.characters)
                 }
 
                 Button("지우기") {
@@ -38,7 +38,7 @@ struct LogViewerView: View {
     }
 
     private func reload() {
-        text = AppLog.read()
+        text = AppLog.readAttributed()
     }
 
     private func share() {

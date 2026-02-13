@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 enum AppLog {
     private static let fileName = "bglog.txt"
@@ -10,37 +11,65 @@ enum AppLog {
             .appendingPathComponent(fileName)
     }
 
-    static func write(_ message: String) {
-        let dateString = formattedDate()
-        let fullMessage = "\(dateString)\n\(message)\n"
+    enum LogColor: String, Codable {
+        case normal
+        case red
+    }
 
-        // ✅ DEBUG 빌드에서만 콘솔 출력
+    private struct Entry: Codable {
+        let time: String          // "HH:mm:ss"
+        let message: String
+        let color: LogColor
+    }
+
+    // ✅ 기존: write(message)
+    static func write(_ message: String) {
+        write(message, .normal)
+    }
+
+    // ✅ 추가: write(message, .red)
+    static func write(_ message: String, _ color: LogColor) {
+        let entry = Entry(time: formattedTime(), message: message, color: color)
+
         #if DEBUG
-        print(fullMessage)
+        print("\(entry.time)\n\(entry.message)\n")
         #endif
 
-        // ✅ 파일 저장 (항상)
         queue.async {
-            let line = fullMessage + "\n"
-            guard let data = line.data(using: .utf8) else { return }
-
-            do {
-                if FileManager.default.fileExists(atPath: fileURL.path) {
-                    let handle = try FileHandle(forWritingTo: fileURL)
-                    try handle.seekToEnd()
-                    try handle.write(contentsOf: data)
-                    try handle.close()
-                } else {
-                    try data.write(to: fileURL, options: .atomic)
-                }
-            } catch {
-                // 무한 루프 방지
+            var entries = loadEntries()
+            entries.insert(entry, at: 0)                 // ✅ 최신이 맨 위로
+            if entries.count > 100 {                     // ✅ 100개만 유지
+                entries = Array(entries.prefix(100))
             }
+            saveEntries(entries)
         }
     }
 
+    /// ✅ 텍스트로 읽기(최신이 위)
     static func read() -> String {
-        (try? String(contentsOf: fileURL, encoding: .utf8)) ?? ""
+        let entries = queue.sync { loadEntries() }
+        return entries
+            .map { "\($0.time)\n\($0.message)\n" }
+            .joined(separator: "\n")
+    }
+
+    /// ✅ 빨간색 포함 AttributedString (LogViewerView에서 사용)
+    static func readAttributed() -> AttributedString {
+        let entries = queue.sync { loadEntries() }
+
+        var result = AttributedString("")
+        for (idx, e) in entries.enumerated() {
+            var chunk = AttributedString("\(e.time)\n\(e.message)\n")
+            if e.color == .red {
+                chunk.foregroundColor = .red
+            }
+
+            result += chunk
+            if idx != entries.count - 1 {
+                result += AttributedString("\n")
+            }
+        }
+        return result
     }
 
     static func clear() {
@@ -53,11 +82,28 @@ enum AppLog {
         fileURL
     }
 
-    private static func formattedDate() -> String {
+    // MARK: - Private
+
+    private static func formattedTime() -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyMMdd HH:mm:ss"
+        formatter.dateFormat = "HH:mm:ss"     // ✅ 요구사항 1
         formatter.locale = Locale(identifier: "ko_KR")
         formatter.timeZone = .current
         return formatter.string(from: Date())
+    }
+
+    private static func loadEntries() -> [Entry] {
+        guard let data = try? Data(contentsOf: fileURL) else { return [] }
+        // JSON 배열로 저장/로드
+        return (try? JSONDecoder().decode([Entry].self, from: data)) ?? []
+    }
+
+    private static func saveEntries(_ entries: [Entry]) {
+        do {
+            let data = try JSONEncoder().encode(entries)
+            try data.write(to: fileURL, options: .atomic)
+        } catch {
+            // 무한 루프 방지
+        }
     }
 }

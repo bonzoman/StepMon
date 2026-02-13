@@ -244,11 +244,11 @@ struct ContentView: View {
             .onChange(of: scenePhase) { _, newPhase in
                 switch newPhase {
                 case .active:
-                    AppLog.write("🟢 scenePhase=active")
+                    AppLog.write("🟢 scenePhase = active")
                     BackgroundStepManager.shared.scheduleAppRefreshForeground(reason: "scene_active")
 
                 case .background:
-                    AppLog.write("🟠 scenePhase=background")
+                    AppLog.write("🟠 scenePhase = background")
 
                     // BG 전환 직후 suspend되기 전에 submit 들어가게 시간 조금 벌기
                     bgTaskId = UIApplication.shared.beginBackgroundTask(withName: "bg.schedule") {
@@ -268,7 +268,7 @@ struct ContentView: View {
                     }
 
                 case .inactive:
-                    AppLog.write("🟡 scenePhase=inactive")
+                    //AppLog.write("🟡 scenePhase=inactive")
                     break
 
                 @unknown default:
