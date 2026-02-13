@@ -108,6 +108,18 @@ struct SettingsView: View {
                                     .foregroundStyle(.blue)
                             }
                         }
+                        
+//                        // ✅ 추가: BG 로그 보기
+//                        NavigationLink(destination: LogViewerView()) {
+//                            Label {
+//                                Text("BG 로그 보기")
+//                                    .fontWeight(.medium)
+//                            } icon: {
+//                                Image(systemName: "doc.text.magnifyingglass")
+//                                    .foregroundStyle(.secondary)
+//                            }
+//                        }
+                        
                     } header: {
                         Text("기록 관리")
                     }

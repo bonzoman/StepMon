@@ -15,6 +15,10 @@ struct ContentView: View {
     @State private var rewardPulse = 1.0
     @State private var rewardColor: Color = .blue
     
+    // beginBackgroundTask 토큰
+    @State private var bgTaskId: UIBackgroundTaskIdentifier = .invalid
+    @State private var showLog = false
+
     let targetStepsForBackground: Double = 10000.0
     
     var maxDailyWater: Int {
@@ -59,6 +63,16 @@ struct ContentView: View {
                                     LinearGradient(colors: [.green, .blue], startPoint: .leading, endPoint: .trailing)
                                 )
                                 .shadow(color: .white.opacity(0.5), radius: 2, x: 0, y: 1)
+                            
+                            
+                            // ✅ 로그 버튼 추가 (설정 버튼 왼쪽)
+                            Button(action: { showLog = true }) {
+                                Image(systemName: "doc.text.magnifyingglass")
+                                    .font(.title2)
+                                    .foregroundStyle(.gray)
+                            }
+                            .padding(.leading, 8)
+                            
                             
                             Button(action: { showSettings = true }) {
                                 Image(systemName: "gearshape.fill")
@@ -207,6 +221,17 @@ struct ContentView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsView()
             }
+            .sheet(isPresented: $showLog) {
+                NavigationStack {
+                    LogViewerView()
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button("닫기") { showLog = false }
+                            }
+                        }
+                }
+            }
+
             .onAppear {
                 viewModel.startUpdates()
                 requestNotificationPermission()
@@ -217,10 +242,38 @@ struct ContentView: View {
                 }
             }
             .onChange(of: scenePhase) { _, newPhase in
-                if newPhase == .active {
-                    viewModel.fetchTodaySteps()
-                } else if newPhase == .background {
-                    BackgroundStepManager.shared.scheduleAppRefresh()
+                switch newPhase {
+                case .active:
+                    AppLog.write("🟢 scenePhase=active")
+                    BackgroundStepManager.shared.scheduleAppRefreshForeground(reason: "scene_active")
+
+                case .background:
+                    AppLog.write("🟠 scenePhase=background")
+
+                    // BG 전환 직후 suspend되기 전에 submit 들어가게 시간 조금 벌기
+                    bgTaskId = UIApplication.shared.beginBackgroundTask(withName: "bg.schedule") {
+                        // 만약 시간 끝나면 종료 처리
+                        if bgTaskId != .invalid {
+                            UIApplication.shared.endBackgroundTask(bgTaskId)
+                            bgTaskId = .invalid
+                        }
+                    }
+
+                    BackgroundStepManager.shared.scheduleAppRefreshBackground(reason: "scene_background")
+
+                    // 끝났으면 즉시 종료(오래 잡고 있을 필요 없음)
+                    if bgTaskId != .invalid {
+                        UIApplication.shared.endBackgroundTask(bgTaskId)
+                        bgTaskId = .invalid
+                    }
+
+                case .inactive:
+                    AppLog.write("🟡 scenePhase=inactive")
+                    break
+
+                @unknown default:
+                    AppLog.write("⚪️ scenePhase=unknown")
+                    break
                 }
             }
         }
