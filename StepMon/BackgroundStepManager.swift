@@ -27,7 +27,7 @@ final class BackgroundStepManager {
 
     // ✅ BG submit "earliest 밀림" 방지용 가드 (추천: 10~15분)
     private let lastBgSubmitKey = "bnz.stepmon.lastBgSubmitDate"
-    private let bgResubmitGuardSeconds: TimeInterval = 12 * 60
+    private let bgResubmitGuardSeconds: TimeInterval = 10 * 60
 
     private init() {}
 
@@ -59,7 +59,10 @@ final class BackgroundStepManager {
             AppLog.write("🟢 FG pendingCount=\(requests.count) already=\(already)")
 
             if already { return }
-            self.submitRefreshRequest(path: "FG")
+            let ok = self.submitRefreshRequest(path: "FG")
+            if !ok {
+                AppLog.write("🟢 FG submit failed")
+            }
         }
     }
 
@@ -83,28 +86,62 @@ final class BackgroundStepManager {
             }
         }
 
-        submitRefreshRequest(path: "BG")
-        UserDefaults.standard.set(Date(), forKey: lastBgSubmitKey)
+        let ok = submitRefreshRequest(path: "BG")
+        if ok {
+            UserDefaults.standard.set(Date(), forKey: lastBgSubmitKey)
+        } else {
+            AppLog.write("🟠 BG submit failed → lastBgSubmitDate not updated")
+        }
     }
 
     // MARK: - BG Task Handler
-
     private func handleAppRefresh(task: BGAppRefreshTask) {
         AppLog.write("🚀 BG START")
 
+        let finishLock = NSLock()
+        var finished = false
+
+        @discardableResult
+        func finish(_ success: Bool, reason: String) -> Bool {
+            finishLock.lock()
+            defer { finishLock.unlock() }
+
+            if finished {
+                AppLog.write("⚠️ finish called twice (reason=\(reason))")
+                return false
+            }
+
+            finished = true
+            AppLog.write("🏁 BG END success=\(success) reason=\(reason)")
+            task.setTaskCompleted(success: success)
+            return true
+        }
+
+        // ⏰ 1. 시스템 만료 핸들러
         task.expirationHandler = {
             AppLog.write("⏰ BG EXPIRED")
-            task.setTaskCompleted(success: false)
+            _ = finish(false, reason: "expired")
         }
 
-        checkStepsAndNotify { success in
-            AppLog.write("🏁 BG END success=\(success)")
-            task.setTaskCompleted(success: success)
+        // ⏱ 2. 안전 타임아웃 (25초)
+        let safetyTimeout = DispatchWorkItem {
+            AppLog.write("💥 BG SAFETY TIMEOUT")
+            _ = finish(false, reason: "safety_timeout")
+        }
 
-            // 다음 예약은 “백그라운드 방식”으로(가드가 있으니 earliest 밀림 방지됨)
-            self.scheduleAppRefreshBackground(reason: "after_run")
+        DispatchQueue.global().asyncAfter(deadline: .now() + 25, execute: safetyTimeout)
+
+        // 🔎 3. 실제 작업
+        checkStepsAndNotify { success in
+            safetyTimeout.cancel()
+
+            if finish(success, reason: "completed") {
+                self.scheduleAppRefreshBackground(reason: "after_run")
+            }
         }
     }
+
+
 
     // MARK: - Core Logic
 
@@ -220,7 +257,8 @@ final class BackgroundStepManager {
 
     // MARK: - Submit Helper
 
-    private func submitRefreshRequest(path: String) {
+    @discardableResult
+    private func submitRefreshRequest(path: String) -> Bool {
         let request = BGAppRefreshTaskRequest(identifier: taskId)
         request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
 
@@ -228,21 +266,24 @@ final class BackgroundStepManager {
             try BGTaskScheduler.shared.submit(request)
             UserDefaults.standard.set(Date(), forKey: lastSubmitKey)
 
-            // ✅ earliest 로컬 포맷으로 출력(UTC 헷갈림 방지)
             if let earliest = request.earliestBeginDate {
                 AppLog.write("✅ submit success [\(path)] earliest=\(formatLocal(earliest))")
             } else {
                 AppLog.write("✅ submit success [\(path)] earliest=nil")
             }
+
+            BGTaskScheduler.shared.getPendingTaskRequests { reqs in
+                let ids = reqs.map { $0.identifier }.joined(separator: ",")
+                AppLog.write("📌 pending count=\(reqs.count) ids=[\(ids)]")
+            }
+
+            return true
         } catch {
             AppLog.write("❌ submit failed [\(path)]: \(error)")
-        }
-
-        BGTaskScheduler.shared.getPendingTaskRequests { reqs in
-            let ids = reqs.map { $0.identifier }.joined(separator: ",")
-            AppLog.write("📌 pending count=\(reqs.count) ids=[\(ids)]")
+            return false
         }
     }
+
 
     private func throttleOK() -> Bool {
         if let last = UserDefaults.standard.object(forKey: lastSubmitKey) as? Date {
