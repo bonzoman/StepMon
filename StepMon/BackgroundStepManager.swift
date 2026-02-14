@@ -37,9 +37,9 @@ final class BackgroundStepManager {
     private let lastNotiSentKey = "bnz.stepmon.lastNotiSentDate"
     private let notiCooldownSeconds: TimeInterval = 15 * 60   // 15분동안 1번만 알림 받기위해
 
-    // ✅ FG 즉시 체크 과다 호출 방지 (추천 30~60초)
+    // ✅ FG 즉시 체크 과다 호출 방지
     private let lastFgCheckKey = "bnz.stepmon.lastFgCheckDate"
-    private let fgCheckCooldownSeconds: TimeInterval = 60
+    private let fgCheckCooldownSeconds: TimeInterval = 180
 
     // ✅ 중복 실행 방지
     private var isFgChecking = false
@@ -47,7 +47,6 @@ final class BackgroundStepManager {
     private init() {}
 
     // MARK: - Register
-
     func registerBackgroundTask(container: ModelContainer) {
         self.modelContainer = container
 
@@ -59,77 +58,127 @@ final class BackgroundStepManager {
         AppLog.write("✅ registerBackgroundTask done", .red)
     }
 
-    // MARK: - Public Schedulers
+    // MARK: - BG Task Handler
+    private func handleAppRefresh(task: BGAppRefreshTask) {
+        AppLog.write("🚀 Task START", .red)
 
-    
-    /// 포그라운드에서 즉시 체크 (submit 하지 않음)
-    func runForegroundCheckIfNeeded(reason: String = "scene_active") {
-        // 쿨다운
-        if let last = UserDefaults.standard.object(forKey: lastFgCheckKey) as? Date {
-            let delta = Date().timeIntervalSince(last)
-            if delta < fgCheckCooldownSeconds {
-                AppLog.write("🟢 FG check cooldown \(Int(delta))s/\(Int(fgCheckCooldownSeconds))s")
-                return
+        let finishLock = NSLock()
+        var finished = false
+
+        @discardableResult
+        func finish(_ success: Bool, reason: String) -> Bool {
+            finishLock.lock()
+            defer { finishLock.unlock() }
+
+            if finished {
+                AppLog.write("⚠️ finish called twice (reason=\(reason))")
+                return false
+            }
+
+            finished = true
+            AppLog.write("🏁 Task END success=\(success) reason=\(reason)")
+            task.setTaskCompleted(success: success)
+            return true
+        }
+
+        // ⏰ 1. 시스템 만료 핸들러
+        task.expirationHandler = {
+            AppLog.write("⏰ Task EXPIRED")
+            _ = finish(false, reason: "expired")
+        }
+
+        // ⏱ 2. 안전 타임아웃 (25초)
+        let safetyTimeout = DispatchWorkItem {
+            AppLog.write("💥 Task SAFETY TIMEOUT")
+            _ = finish(false, reason: "safety_timeout")
+        }
+
+        DispatchQueue.global().asyncAfter(deadline: .now() + 25, execute: safetyTimeout)
+
+        // 🔎 3. 실제 작업
+        checkStepsAndNotify(source: "bgTask") { success in
+            safetyTimeout.cancel()
+
+            if finish(success, reason: "completed") {
+                //self.scheduleAppRefreshBackground(reason: "after_run")
+                let ok = self.submitRefreshRequest(path: "FG")
             }
         }
-
-        // 중복 실행 방지
-        if isFgChecking {
-            AppLog.write("🟢 FG check skipped (already running)")
-            return
-        }
-
-        isFgChecking = true
-        UserDefaults.standard.set(Date(), forKey: lastFgCheckKey)
-
-        AppLog.write("🟢 FG CHECK START (\(reason))")
-
-        checkStepsAndNotify { success in
-            AppLog.write("🟢 FG CHECK END success=\(success)")
-            self.isFgChecking = false
-        }
     }
+    
+    
+    
+    // MARK: - Public Schedulers
+    // 포그라운드에서 즉시 체크 (submit 하지 않음)
+//    func runForegroundCheckIfNeeded(reason: String = "scene_active") {
+//        // 쿨다운
+//        if let last = UserDefaults.standard.object(forKey: lastFgCheckKey) as? Date {
+//            let delta = Date().timeIntervalSince(last)
+//            if delta < fgCheckCooldownSeconds {
+//                AppLog.write("🟢 FG check cooldown \(Int(delta))s/\(Int(fgCheckCooldownSeconds))s")
+//                return
+//            }
+//        }
+//
+//        // 중복 실행 방지
+//        if isFgChecking {
+//            AppLog.write("🟢 FG check skipped (already running)")
+//            return
+//        }
+//
+//        isFgChecking = true
+//        UserDefaults.standard.set(Date(), forKey: lastFgCheckKey)
+//
+//        AppLog.write("🟢 FG CHECK START (\(reason))")
+//
+//        checkStepsAndNotify { success in
+//            AppLog.write("🟢 FG CHECK END success=\(success)")
+//            self.isFgChecking = false
+//        }
+//    }
 
     
     
-    /// 포그라운드 스케쥴은 미사용(ContentView)
-//    func scheduleAppRefreshForeground(reason: String = "foreground") {
-//        AppLog.write("🟢 schedule FG called (\(reason))")
+    // 포그라운드
+    func scheduleAppRefreshForeground(reason: String = "foreground") {
+        AppLog.write("🟢🟢🟢 FG called (\(reason))", .green)
 //        guard throttleOK() else {
 //            AppLog.write("🟢 FG throttled")
 //            return
 //        }
-//
-//        BGTaskScheduler.shared.getPendingTaskRequests { requests in
-//            let already = requests.contains(where: { $0.identifier == self.taskId })
-//            AppLog.write("🟢 FG pendingCount=\(requests.count) already=\(already)")
-//
-//            if already { return }
-//            let ok = self.submitRefreshRequest(path: "FG")
-//            if !ok {
-//                AppLog.write("🟢 FG submit failed")
-//            }
-//        }
-//    }
 
+        BGTaskScheduler.shared.getPendingTaskRequests { requests in
+            let already = requests.contains(where: { $0.identifier == self.taskId })
+            AppLog.write("🟢 FG pendingCount=\(requests.count) already=\(already)")
+
+            if already { return }
+            let ok = self.submitRefreshRequest(path: "FG")
+            if !ok {
+                AppLog.write("🟢 FG submit failed")
+            }
+        }
+    }
+     
+    /* **************
     func scheduleAppRefreshBackground(reason: String = "background") {
-        AppLog.write("🟠 schedule BG called (\(reason))")
+        //AppLog.write("🟠 schedule BG called (\(reason))")
+        AppLog.write("🟠 schedule BG called")
 
         // (0) ✅ BG pending 조회 호출 자체를 90초로 제한 (로그/배터리 절약)
         if let last = UserDefaults.standard.object(forKey: lastBgCheckKey) as? Date {
             let delta = Date().timeIntervalSince(last)
             if delta < bgCheckThrottleSeconds {
-                AppLog.write("🟠 BG check throttled delta=\(Int(delta))s")
+                AppLog.write("🟠 BG check throttled =\(Int(delta))s / \(Int(bgCheckThrottleSeconds))s")
                 return
             }
         }
         UserDefaults.standard.set(Date(), forKey: lastBgCheckKey)
 
         // (1) 짧은 throttle(30초)
-        guard throttleOK() else {
-            AppLog.write("🟠 BG throttled(30s)")
-            return
-        }
+//        guard throttleOK() else {
+//            AppLog.write("🟠 BG throttled(30s)")
+//            return
+//        }
 
         // (2) ✅ BG 전용 가드
         if let last = UserDefaults.standard.object(forKey: lastBgSubmitKey) as? Date {
@@ -176,61 +225,17 @@ final class BackgroundStepManager {
             }
         }
     }
+    ******************* */
 
-    
 
-    // MARK: - BG Task Handler
-    private func handleAppRefresh(task: BGAppRefreshTask) {
-        AppLog.write("🚀 BG START", .red)
 
-        let finishLock = NSLock()
-        var finished = false
 
-        @discardableResult
-        func finish(_ success: Bool, reason: String) -> Bool {
-            finishLock.lock()
-            defer { finishLock.unlock() }
-
-            if finished {
-                AppLog.write("⚠️ finish called twice (reason=\(reason))")
-                return false
-            }
-
-            finished = true
-            AppLog.write("🏁 BG END success=\(success) reason=\(reason)")
-            task.setTaskCompleted(success: success)
-            return true
-        }
-
-        // ⏰ 1. 시스템 만료 핸들러
-        task.expirationHandler = {
-            AppLog.write("⏰ BG EXPIRED")
-            _ = finish(false, reason: "expired")
-        }
-
-        // ⏱ 2. 안전 타임아웃 (25초)
-        let safetyTimeout = DispatchWorkItem {
-            AppLog.write("💥 BG SAFETY TIMEOUT")
-            _ = finish(false, reason: "safety_timeout")
-        }
-
-        DispatchQueue.global().asyncAfter(deadline: .now() + 25, execute: safetyTimeout)
-
-        // 🔎 3. 실제 작업
-        checkStepsAndNotify { success in
-            safetyTimeout.cancel()
-
-            if finish(success, reason: "completed") {
-                self.scheduleAppRefreshBackground(reason: "after_run")
-            }
-        }
-    }
 
 
 
     // MARK: - Core Logic
 
-    private func checkStepsAndNotify(completion: @escaping (Bool) -> Void) {
+    private func checkStepsAndNotify(source: String, completion: @escaping (Bool) -> Void) {
         guard let container = modelContainer else {
             completion(false)
             return
@@ -274,7 +279,8 @@ final class BackgroundStepManager {
                     steps: steps,
                     threshold: threshold,
                     isNotified: shouldNotify,
-                    intervalMinutes: readPref.checkIntervalMinutes
+                    intervalMinutes: readPref.checkIntervalMinutes,
+                    source: source
                 )
                 writeContext.insert(history)
 
@@ -288,16 +294,16 @@ final class BackgroundStepManager {
                 }
 
                 try writeContext.save()
-                AppLog.write("✅ history saved steps=\(steps) notified=\(shouldNotify)", .red)
+                AppLog.write("history saved steps=\(steps) noti=\(shouldNotify)", .red)
 
                 //알림 조건에 충족하더라도 15분동안 1번만 알림 보낸다!
                 if shouldNotify {
-                    if self.notificationCooldownOK(now: now) {
+//                    if self.notificationCooldownOK(now: now) {
                         self.sendNotification(steps: steps, threshold: threshold)
                         UserDefaults.standard.set(now, forKey: self.lastNotiSentKey)
-                    } else {
-                        AppLog.write("⛔️ notification skipped (cooldown)")
-                    }
+//                    } else {
+//                        AppLog.write("⛔️ notification skipped (cooldown)")
+//                    }
                 }
 
                 completion(true)
@@ -341,7 +347,7 @@ final class BackgroundStepManager {
             if let error = error {
                 AppLog.write("❌ notification add error: \(error)", .red)
             } else {
-                AppLog.write("✅ notification posted", .red)
+                AppLog.write("✅✅ noti posted ✅✅", .red)
             }
         }
     }
@@ -363,10 +369,10 @@ final class BackgroundStepManager {
                 AppLog.write("✅ submit success [\(path)] earliest=nil", .red)
             }
 
-            BGTaskScheduler.shared.getPendingTaskRequests { reqs in
-                let ids = reqs.map { $0.identifier }.joined(separator: ",")
-                AppLog.write("📌 pending count=\(reqs.count) ids=[\(ids)]")
-            }
+//            BGTaskScheduler.shared.getPendingTaskRequests { reqs in
+//                let ids = reqs.map { $0.identifier }.joined(separator: ",")
+//                AppLog.write("📌 pending count=\(reqs.count) ids=[\(ids)]")
+//            }
 
             return true
         } catch {
@@ -376,13 +382,13 @@ final class BackgroundStepManager {
     }
 
 
-    private func throttleOK() -> Bool {
-        if let last = UserDefaults.standard.object(forKey: lastSubmitKey) as? Date {
-            let delta = Date().timeIntervalSince(last)
-            return delta >= submitThrottleSeconds
-        }
-        return true
-    }
+//    private func throttleOK() -> Bool {
+//        if let last = UserDefaults.standard.object(forKey: lastSubmitKey) as? Date {
+//            let delta = Date().timeIntervalSince(last)
+//            return delta >= submitThrottleSeconds
+//        }
+//        return true
+//    }
 
     private func formatLocal(_ date: Date) -> String {
         let f = DateFormatter()
@@ -399,5 +405,16 @@ final class BackgroundStepManager {
         }
         return true
     }
+    
+    // ✅ Silent Push(원격 알림)에서 호출할 공개 메서드
+    func handleSilentPush(reason: String, completion: @escaping (Bool) -> Void) {
+        AppLog.write("📩 SilentPush received reason=\(reason)", .red)
+
+        // 내부 코어 로직 재사용
+        checkStepsAndNotify(source: "silentPush") { ok in
+            completion(ok)
+        }
+    }
+
 
 }

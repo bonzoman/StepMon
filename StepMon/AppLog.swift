@@ -14,6 +14,10 @@ enum AppLog {
     enum LogColor: String, Codable {
         case normal
         case red
+        case yellow
+        case gray
+        case green
+        case blue
     }
 
     private struct Entry: Codable {
@@ -60,8 +64,19 @@ enum AppLog {
         var result = AttributedString("")
         for (idx, e) in entries.enumerated() {
             var chunk = AttributedString("\(e.time)\n\(e.message)\n")
-            if e.color == .red {
+            switch e.color {
+            case .normal:
+                break
+            case .red:
                 chunk.foregroundColor = .red
+            case .yellow:
+                chunk.foregroundColor = .yellow
+            case .gray:
+                chunk.foregroundColor = .gray
+            case .green:
+                chunk.foregroundColor = .green
+            case .blue:
+                chunk.foregroundColor = .blue
             }
 
             result += chunk

@@ -45,10 +45,10 @@ class UserPreference {
     var isSuperUser: Bool {
         let calendar = Calendar.current
         let startComp = calendar.dateComponents([.hour, .minute], from: startTime)
-        let endComp = calendar.dateComponents([.hour, .minute], from: endTime)
+        //let endComp = calendar.dateComponents([.hour, .minute], from: endTime)
         
-        return startComp.hour == 0 && startComp.minute == 2 &&
-               endComp.hour == 23 && endComp.minute == 58
+        return startComp.hour == 0 && startComp.minute == 2
+        //&& endComp.hour == 23 && endComp.minute == 58
     }
     
     init(checkIntervalMinutes: Int = 60,
@@ -88,14 +88,16 @@ class NotificationHistory {
     var steps: Int
     var threshold: Int
     var isNotified: Bool
-    var intervalMinutes: Int // [추가] 기록 시점의 집계 범위(분) 저장
-    
-    init(timestamp: Date, steps: Int, threshold: Int, isNotified: Bool, intervalMinutes: Int) {
+    var intervalMinutes: Int
+    var source: String // ✅ 추가: 어떤 경로로 실행됐는지 (bgTask / silentPush / fg)
+
+    init(timestamp: Date, steps: Int, threshold: Int, isNotified: Bool, intervalMinutes: Int, source: String) {
         self.timestamp = timestamp
         self.steps = steps
         self.threshold = threshold
         self.isNotified = isNotified
         self.intervalMinutes = intervalMinutes
+        self.source = source
         
     }
 }

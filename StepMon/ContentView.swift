@@ -18,6 +18,9 @@ struct ContentView: View {
     // beginBackgroundTask 토큰
     @State private var bgTaskId: UIBackgroundTaskIdentifier = .invalid
     @State private var showLog = false
+    
+    @State private var recentSteps: Int? = nil
+    @State private var recentCheckedAt: Date? = nil
 
     let targetStepsForBackground: Double = 10000.0
     
@@ -216,6 +219,25 @@ struct ContentView: View {
                         //Spacer()
                     } //end Vstack
                 }
+                // ✅ 상단 고정 배너 (스크롤과 분리)
+                .safeAreaInset(edge: .top) {
+                    if let pref = preferences.first {
+                        RecentStepsBanner(
+                            intervalMinutes: pref.checkIntervalMinutes,
+                            steps: recentSteps,
+                            threshold: pref.stepThreshold
+                        )
+                        .padding(.horizontal, 20)
+                        .padding(.top, 8)
+                        .padding(.bottom, 6)
+                    }
+                }
+                
+                
+                
+                
+                
+                
             }
             .navigationBarHidden(true)
             .sheet(isPresented: $showSettings) {
@@ -244,11 +266,13 @@ struct ContentView: View {
             .onChange(of: scenePhase) { _, newPhase in
                 switch newPhase {
                 case .active:
-                    //BackgroundStepManager.shared.scheduleAppRefreshForeground(reason: "scene_active")
-                    BackgroundStepManager.shared.runForegroundCheckIfNeeded(reason: "scene_active")
+                    BackgroundStepManager.shared.scheduleAppRefreshForeground(reason: "scene_active")
+                    //BackgroundStepManager.shared.runForegroundCheckIfNeeded(reason: "scene_active")
+                    refreshRecentSteps()
 
                 case .background:
-                    //AppLog.write("🟠 scenePhase = background")
+                    break
+                    /* 백그라운드 제거 *******************
 
                     // BG 전환 직후 suspend되기 전에 submit 들어가게 시간 조금 벌기
                     bgTaskId = UIApplication.shared.beginBackgroundTask(withName: "bg.schedule") {
@@ -266,6 +290,7 @@ struct ContentView: View {
                         UIApplication.shared.endBackgroundTask(bgTaskId)
                         bgTaskId = .invalid
                     }
+                     ******************* */
 
                 case .inactive:
                     //AppLog.write("🟡 scenePhase=inactive")
@@ -336,5 +361,62 @@ struct ContentView: View {
     
     func requestNotificationPermission() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+    }
+    
+    private func refreshRecentSteps() {
+        guard let pref = preferences.first else { return }
+
+        let now = Date()
+        let interval = TimeInterval(pref.checkIntervalMinutes * 60)
+        let start = now.addingTimeInterval(-interval)
+
+        recentSteps = nil // "확인중..." 표시
+
+        CoreMotionManager.shared.querySteps(from: start, to: now) { steps in
+            DispatchQueue.main.async {
+                self.recentSteps = steps
+                self.recentCheckedAt = now
+            }
+        }
+    }
+}
+
+
+private struct RecentStepsBanner: View {
+    let intervalMinutes: Int
+    let steps: Int?
+    let threshold: Int
+
+    var body: some View {
+        let s = steps ?? 0
+        let below = (steps != nil) && (s < threshold)
+
+        HStack(spacing: 8) {
+            Image(systemName: below ? "exclamationmark.circle.fill" : "figure.walk")
+                .foregroundStyle(below ? .orange : .primary)
+
+            if let steps {
+                let highlighted = Text("\(steps)보")
+                    .foregroundStyle(below ? .orange : .primary)
+                    .fontWeight(.semibold)
+
+                Text("최근 \(intervalMinutes)분 동안 \(highlighted) 걸었습니다.")
+                    .foregroundStyle(.primary)
+            } else {
+                Text("최근 \(intervalMinutes)분 걸음 수를 확인하는 중…")
+                    .foregroundStyle(.primary)
+            }
+
+            Spacer()
+        }
+        .font(.subheadline)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .background(.thinMaterial)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.primary.opacity(0.12), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }

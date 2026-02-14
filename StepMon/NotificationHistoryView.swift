@@ -4,7 +4,7 @@ import SwiftData
 struct NotificationHistoryView: View {
     @Query(sort: \NotificationHistory.timestamp, order: .reverse)
     private var history: [NotificationHistory]
-    
+
     // "yyyy.MM.dd HH:mm" 포맷터
     private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -41,9 +41,18 @@ struct NotificationHistoryView: View {
                                 
                                 // [상단 행] 시각
                                 HStack(spacing: 8) {
+                                    
                                     Text("\(item.timestamp, formatter: Self.dateFormatter)")
                                         .font(.system(.caption, design: .monospaced))
                                         .foregroundStyle(.secondary)
+                                    
+                                    Text(sourceLabel(item.source))
+                                        .font(.caption2)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(sourceColor(item.source).opacity(0.15))
+                                        .foregroundStyle(sourceColor(item.source))
+                                        .clipShape(Capsule())
                                 }
                                 
                                 // [하단 행] 걸음 수 및 기준치
@@ -76,4 +85,23 @@ struct NotificationHistoryView: View {
         .navigationTitle("알림 체크 히스토리")
         .navigationBarTitleDisplayMode(.inline)
     }
+    
+    private func sourceLabel(_ source: String) -> String {
+        switch source {
+        case "silentPush": return "Silent"
+        case "bgTask": return "BG"
+        case "foreground": return "FG"
+        default: return source
+        }
+    }
+
+    private func sourceColor(_ source: String) -> Color {
+        switch source {
+        case "silentPush": return .purple
+        case "bgTask": return .blue
+        case "foreground": return .green
+        default: return .gray
+        }
+    }
+
 }
