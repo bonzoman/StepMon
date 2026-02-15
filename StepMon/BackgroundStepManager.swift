@@ -101,7 +101,7 @@ final class BackgroundStepManager {
 
             if finish(success, reason: "completed") {
                 //self.scheduleAppRefreshBackground(reason: "after_run")
-                let ok = self.submitRefreshRequest(path: "FG")
+                self.submitRefreshRequest(path: "FG")
             }
         }
     }

@@ -209,6 +209,7 @@ struct ContentView: View {
                                 }
                             }
                             
+                            
                             GardenView(pref: pref)
                                 .padding(.bottom, 50) // 하단 여백 확보
                             
@@ -392,18 +393,18 @@ private struct RecentStepsBanner: View {
         let below = (steps != nil) && (s < threshold)
 
         HStack(spacing: 8) {
-            Image(systemName: below ? "exclamationmark.circle.fill" : "figure.walk")
+            Image(systemName: "exclamationmark.circle.fill")
                 .foregroundStyle(below ? .orange : .primary)
 
             if let steps {
-                let highlighted = Text("\(steps)보")
-                    .foregroundStyle(below ? .orange : .primary)
-                    .fontWeight(.semibold)
-
-                Text("최근 \(intervalMinutes)분 동안 \(highlighted) 걸었습니다.")
-                    .foregroundStyle(.primary)
+                
+                let styledSteps = Text("\(steps)보")
+                        .foregroundColor(.orange)
+                        .bold()
+                //MARK: 최근 60분 동안 500보 걸었어요. (Localizable.xcstrings 파일에 "RECENT_STEPS_STRING" 문구 있음)
+                Text("RECENT_STEPS_STRING \(intervalMinutes) \(styledSteps)")
             } else {
-                Text("최근 \(intervalMinutes)분 걸음 수를 확인하는 중…")
+                Text("최근 걸음 수를 확인 중…")
                     .foregroundStyle(.primary)
             }
 
