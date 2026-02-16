@@ -43,6 +43,18 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
         // 원하면 저장도 가능 (UserDefaults 등)
         // UserDefaults.standard.set(token, forKey: "apnsDeviceToken")
+        
+        // ✅ 현재 알림 허용 여부도 같이 실어 보냄
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            let enabled = (settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional)
+
+            Task {
+                await DeviceTokenUploader.shared.upsert(
+                    deviceToken: token,
+                    isNotificationEnabled: enabled
+                )
+            }
+        }
     }
     
     
@@ -106,6 +118,10 @@ struct StepMonitorApp: App {
             // ✅ 앱 시작 시 1회: 포그라운드 방식(pending 체크 후 submit)
             //BackgroundStepManager.shared.scheduleAppRefreshForeground(reason: "app_init")
             //BackgroundStepManager.shared.runForegroundCheckIfNeeded(reason: "app_init")
+            
+            Task {
+                await DeviceTokenUploader.shared.flushIfNeeded()
+            }
             
         } catch {
             fatalError("Failed to create ModelContainer: \(error)")

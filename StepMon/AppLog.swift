@@ -101,9 +101,14 @@ enum AppLog {
 
     private static func formattedTime() -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm:ss"     // ✅ 요구사항 1
-        formatter.locale = Locale(identifier: "ko_KR")
+        // 1. 사용자의 현재 지역 설정을 따름
+        formatter.locale = Locale.current
         formatter.timeZone = .current
+        
+        // 2. '시간, 분, 초'가 필요하다는 템플릿을 제공
+        // 시스템이 사용자 설정에 맞춰 "14:05:01" 또는 "2:05:01 PM"으로 변환합니다.
+        formatter.setLocalizedDateFormatFromTemplate("Hms")
+        
         return formatter.string(from: Date())
     }
 

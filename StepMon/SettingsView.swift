@@ -6,6 +6,9 @@ struct SettingsView: View {
     @Environment(\.openURL) var openURL // URL 오픈을 위한 환경 변수 추가
     @Query var preferences: [UserPreference]
     
+    // ✅ 초기값 스냅샷 저장용
+    @State private var baseline: SettingsBaseline?
+
     var body: some View {
         NavigationStack {
             Form {
@@ -63,12 +66,14 @@ struct SettingsView: View {
                         .tint(.blue)
                         
                         if pref.isNotificationEnabled {
-                            DatePicker(selection: Bindable(pref).startTime, displayedComponents: .hourAndMinute) {
+                            // 시작 시간: 종료 시간 이전으로 제한
+                            DatePicker(selection: Bindable(pref).startTime, in: ...pref.endTime, displayedComponents: .hourAndMinute) {
                                 Label("알림 시작", systemImage: "sun.max.fill")
                                     .foregroundStyle(.orange)
                             }
-                            
-                            DatePicker(selection: Bindable(pref).endTime, displayedComponents: .hourAndMinute) {
+
+                            // 종료 시간: 시작 시간 이후로 제한
+                            DatePicker(selection: Bindable(pref).endTime, in: pref.startTime..., displayedComponents: .hourAndMinute) {
                                 Label("알림 종료", systemImage: "moon.stars.fill")
                                     .foregroundStyle(.indigo)
                             }
@@ -148,9 +153,42 @@ struct SettingsView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("완료") {
-                        dismiss()
+                        guard let pref = preferences.first else {
+                            dismiss()
+                            return
+                        }
+
+                        let current = SettingsBaseline(pref: pref, timeZone: TimeZone.current.identifier)
+
+                        // baseline 없으면(이상케이스) 그냥 닫기
+                        guard let baseline else {
+                            dismiss()
+                            return
+                        }
+
+                        // ✅ 변경 없으면 업로드 없이 닫기
+                        if current == baseline {
+                            dismiss()
+                            return
+                        }
+
+                        // ✅ 변경 있으면 1회 업로드 후 닫기
+                        Task {
+                            await DeviceSettingsUploader.shared.upsert(
+                                isNotificationEnabled: pref.isNotificationEnabled,
+                                startMinutes: minutesOfDay(pref.startTime),
+                                endMinutes: minutesOfDay(pref.endTime),
+                                timeZone: TimeZone.current.identifier
+                            )
+                            dismiss()
+                        }
                     }
                     .fontWeight(.bold)
+                }
+            }
+            .onAppear {
+                if baseline == nil, let pref = preferences.first {
+                    baseline = SettingsBaseline(pref: pref, timeZone: TimeZone.current.identifier)
                 }
             }
         }
@@ -166,4 +204,40 @@ struct SettingsView: View {
             openURL(url)
         }
     }
+    
+
+    private func minutesOfDay(_ date: Date) -> Int {
+        var cal = Calendar.current
+        cal.timeZone = TimeZone.current
+        let comps = cal.dateComponents([.hour, .minute], from: date)
+        let h = comps.hour ?? 0
+        let m = comps.minute ?? 0
+        return h * 60 + m
+    }
+    
+    private struct SettingsBaseline: Equatable {
+        let isNotificationEnabled: Bool
+        let startMinutes: Int
+        let endMinutes: Int
+        let timeZone: String
+
+        init(pref: UserPreference, timeZone: String) {
+            self.isNotificationEnabled = pref.isNotificationEnabled
+            self.startMinutes = SettingsBaseline.minutesOfDay(pref.startTime)
+            self.endMinutes = SettingsBaseline.minutesOfDay(pref.endTime)
+            self.timeZone = timeZone
+        }
+
+        private static func minutesOfDay(_ date: Date) -> Int {
+            var cal = Calendar.current
+            cal.timeZone = TimeZone.current
+            let comps = cal.dateComponents([.hour, .minute], from: date)
+            return (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
+        }
+    }
+
+
 }
+
+
+

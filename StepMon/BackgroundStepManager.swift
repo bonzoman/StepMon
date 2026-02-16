@@ -392,9 +392,14 @@ final class BackgroundStepManager {
 
     private func formatLocal(_ date: Date) -> String {
         let f = DateFormatter()
-        f.dateFormat = "yyyy.MM.dd HH:mm:ss"
-        f.locale = Locale(identifier: "ko_KR")
+        // 사용자의 지역 설정을 반영합니다.
+        f.locale = Locale.current
         f.timeZone = .current
+        
+        // "jmm" 또는 "Hm" 템플릿을 사용하면 시스템 설정에 따라
+        // 한국인은 "14:00", 미국인은 "2:00 PM"으로 알아서 보여줍니다.
+        f.setLocalizedDateFormatFromTemplate("Hm")
+        
         return f.string(from: date)
     }
 
