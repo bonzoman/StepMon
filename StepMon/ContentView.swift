@@ -256,7 +256,7 @@ struct ContentView: View {
             }
 
             .onAppear {
-                viewModel.startUpdates()
+                viewModel.fetchTodaySteps()   // ✅ 오늘 0시~현재로 즉시 동기화 + 그 다음 실시간
                 requestNotificationPermission()
             }
             .onChange(of: viewModel.currentSteps) { _, newSteps in
@@ -267,38 +267,29 @@ struct ContentView: View {
             .onChange(of: scenePhase) { _, newPhase in
                 switch newPhase {
                 case .active:
-                    BackgroundStepManager.shared.scheduleAppRefreshForeground(reason: "scene_active")
-                    //BackgroundStepManager.shared.runForegroundCheckIfNeeded(reason: "scene_active")
-                    refreshRecentSteps()
-
+                    
+                    viewModel.fetchTodaySteps() // ✅ 자정 지나서 돌아오면 어제값 방지
+                    
+                    //포그라운드 제거
+                    //BackgroundStepManager.shared.scheduleAppRefreshForeground(reason: "scene_active")
+                    
+                    refreshRecentSteps() //최근 60분 걸음수 refresh
+                    
+                    //SettingsView에서 알람정보 upload 실패해서 pending건 있다면 재시도
+                    Task { await DeviceSettingsUploader.shared.flushIfNeeded() }
+                    
                 case .background:
-                    break
-                    /* 백그라운드 제거 *******************
-
-                    // BG 전환 직후 suspend되기 전에 submit 들어가게 시간 조금 벌기
-                    bgTaskId = UIApplication.shared.beginBackgroundTask(withName: "bg.schedule") {
-                        // 만약 시간 끝나면 종료 처리
-                        if bgTaskId != .invalid {
-                            UIApplication.shared.endBackgroundTask(bgTaskId)
-                            bgTaskId = .invalid
-                        }
-                    }
+                    
+                    AppLog.write("🟡 scenePhase = background", .yellow)
 
                     BackgroundStepManager.shared.scheduleAppRefreshBackground(reason: "scene_background")
 
-                    // 끝났으면 즉시 종료(오래 잡고 있을 필요 없음)
-                    if bgTaskId != .invalid {
-                        UIApplication.shared.endBackgroundTask(bgTaskId)
-                        bgTaskId = .invalid
-                    }
-                     ******************* */
+                    break
 
                 case .inactive:
-                    //AppLog.write("🟡 scenePhase=inactive")
                     break
 
                 @unknown default:
-                    AppLog.write("⚪️ scenePhase=unknown")
                     break
                 }
             }

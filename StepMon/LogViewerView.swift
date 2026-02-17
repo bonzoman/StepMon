@@ -1,30 +1,41 @@
 import SwiftUI
+import SwiftData
 import UIKit
 
 struct LogViewerView: View {
-    @State private var text: AttributedString = ""
+    @Query(sort: \AppLogEntry.timestamp, order: .reverse)
+    private var logs: [AppLogEntry]
 
     var body: some View {
         VStack(spacing: 12) {
             ScrollView {
-                Text(text.characters.isEmpty ? AttributedString("로그 없음") : text)
-                    .font(.system(.footnote, design: .monospaced))
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                if logs.isEmpty {
+                    Text("로그 없음")
+                        .font(.system(.footnote, design: .monospaced))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                } else {
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(logs.prefix(300)) { item in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(item.timestamp, style: .time)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundStyle(.secondary)
+
+                                Text(item.message)
+                                    .font(.system(.footnote, design: .monospaced))
+                                    .foregroundStyle(color(from: item.colorRaw))
+                                    .textSelection(.enabled)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
                     .padding()
-                    .textSelection(.enabled)
+                }
             }
 
             HStack(spacing: 12) {
-                Button("새로고침") { reload() }
-
-                Button("전체 복사") {
-                    UIPasteboard.general.string = String(text.characters)
-                }
-
-                Button("지우기") {
-                    AppLog.clear()
-                    reload()
-                }
+                Button("지우기") { AppLog.clear() }
 
                 Spacer()
 
@@ -34,15 +45,21 @@ struct LogViewerView: View {
             .padding(.bottom, 10)
         }
         .navigationTitle("BG 로그")
-        .onAppear { reload() }
     }
 
-    private func reload() {
-        text = AppLog.readAttributed()
+    private func color(from raw: String) -> Color {
+        switch raw {
+        case "red": return .red
+        case "yellow": return .yellow
+        case "gray": return .gray
+        case "green": return .green
+        case "blue": return .blue
+        default: return .primary
+        }
     }
 
     private func share() {
-        let url = AppLog.exportURL()
+        guard let url = AppLog.exportURL() else { return }
         let vc = UIActivityViewController(activityItems: [url], applicationActivities: nil)
 
         if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,

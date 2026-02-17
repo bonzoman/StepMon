@@ -102,7 +102,11 @@ struct StepMonitorApp: App {
     init() {
         do {
             // NotificationHistory.self를 추가하여 두 모델을 모두 관리하도록 설정
-            container = try ModelContainer(for: UserPreference.self, NotificationHistory.self)
+            container = try ModelContainer(for: UserPreference.self,
+                                           NotificationHistory.self,
+                                           AppLogEntry.self)
+            
+            AppLog.configure(container: container)
             
             let context = ModelContext(container)
             
@@ -112,8 +116,12 @@ struct StepMonitorApp: App {
                 context.insert(UserPreference())
             }
             
+            
+            
             // 백그라운드 매니저 초기화 및 등록
             BackgroundStepManager.shared.registerBackgroundTask(container: container)
+            
+            
             
             // ✅ 앱 시작 시 1회: 포그라운드 방식(pending 체크 후 submit)
             //BackgroundStepManager.shared.scheduleAppRefreshForeground(reason: "app_init")
@@ -122,6 +130,11 @@ struct StepMonitorApp: App {
             Task {
                 await DeviceTokenUploader.shared.flushIfNeeded()
             }
+            
+            Task {
+                await DeviceSettingsUploader.shared.flushIfNeeded()
+            }
+
             
         } catch {
             fatalError("Failed to create ModelContainer: \(error)")

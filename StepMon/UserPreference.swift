@@ -83,7 +83,7 @@ class UserPreference {
 }
 
 @Model
-class NotificationHistory {
+final class NotificationHistory {
     var timestamp: Date
     var steps: Int
     var threshold: Int
@@ -99,5 +99,18 @@ class NotificationHistory {
         self.intervalMinutes = intervalMinutes
         self.source = source
         
+    }
+}
+
+@Model
+final class AppLogEntry {
+    var timestamp: Date
+    var message: String
+    var colorRaw: String   // AppLog.LogColor.rawValue 저장
+
+    init(timestamp: Date = Date(), message: String, colorRaw: String) {
+        self.timestamp = timestamp
+        self.message = message
+        self.colorRaw = colorRaw
     }
 }

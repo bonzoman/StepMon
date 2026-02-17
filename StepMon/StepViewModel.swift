@@ -22,6 +22,9 @@ class StepViewModel {
     }
     
     func startUpdates() {
+        
+        CoreMotionManager.shared.stopMonitoring() // ✅ 중복 모니터링 방지
+
         let now = Date()
         let startOfDay = Calendar.current.startOfDay(for: now)
         

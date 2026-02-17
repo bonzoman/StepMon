@@ -1,129 +1,132 @@
 import Foundation
 import SwiftUI
+import SwiftData
 
 enum AppLog {
-    private static let fileName = "bglog.txt"
     private static let queue = DispatchQueue(label: "bnz.stepmon.applog")
 
-    private static var fileURL: URL {
-        FileManager.default
-            .urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent(fileName)
-    }
+    private static var container: ModelContainer?
+    private static var trimCounter = 0
 
     enum LogColor: String, Codable {
-        case normal
-        case red
-        case yellow
-        case gray
-        case green
-        case blue
+        case normal, red, yellow, gray, green, blue
     }
 
-    private struct Entry: Codable {
-        let time: String          // "HH:mm:ss"
-        let message: String
-        let color: LogColor
+    // ✅ 앱 시작 시 1회 주입
+    static func configure(container: ModelContainer) {
+        self.container = container
     }
 
-    // ✅ 기존: write(message)
     static func write(_ message: String) {
         write(message, .normal)
     }
 
-    // ✅ 추가: write(message, .red)
     static func write(_ message: String, _ color: LogColor) {
-        let entry = Entry(time: formattedTime(), message: message, color: color)
-
+        
+        
         #if DEBUG
-        print("\(entry.time)\n\(entry.message)\n")
+        print("\(formattedTime())\n\(message)\n")
         #endif
 
+        guard let container else { return }
+
         queue.async {
-            var entries = loadEntries()
-            entries.insert(entry, at: 0)                 // ✅ 최신이 맨 위로
-            if entries.count > 100 {                     // ✅ 100개만 유지
-                entries = Array(entries.prefix(100))
-            }
-            saveEntries(entries)
-        }
-    }
-
-    /// ✅ 텍스트로 읽기(최신이 위)
-    static func read() -> String {
-        let entries = queue.sync { loadEntries() }
-        return entries
-            .map { "\($0.time)\n\($0.message)\n" }
-            .joined(separator: "\n")
-    }
-
-    /// ✅ 빨간색 포함 AttributedString (LogViewerView에서 사용)
-    static func readAttributed() -> AttributedString {
-        let entries = queue.sync { loadEntries() }
-
-        var result = AttributedString("")
-        for (idx, e) in entries.enumerated() {
-            var chunk = AttributedString("\(e.time)\n\(e.message)\n")
-            switch e.color {
-            case .normal:
-                break
-            case .red:
-                chunk.foregroundColor = .red
-            case .yellow:
-                chunk.foregroundColor = .yellow
-            case .gray:
-                chunk.foregroundColor = .gray
-            case .green:
-                chunk.foregroundColor = .green
-            case .blue:
-                chunk.foregroundColor = .blue
+            let ctx = ModelContext(container)
+            ctx.insert(AppLogEntry(timestamp: Date(),
+                                  message: message,
+                                  colorRaw: color.rawValue))
+            
+            // // ✅ 로그 개수 제한(예: 300개) — 오래된 것 삭제
+            trimCounter += 1
+            if trimCounter % 10 == 0 {
+                trimIfNeeded(context: ctx, maxCount: 300)
             }
 
-            result += chunk
-            if idx != entries.count - 1 {
-                result += AttributedString("\n")
+            
+
+            do { try ctx.save() } catch {
+                // 무한루프 방지: 여기서 다시 AppLog.write 호출 금지
             }
         }
-        return result
     }
 
     static func clear() {
+        guard let container else { return }
         queue.async {
-            try? FileManager.default.removeItem(at: fileURL)
+            let ctx = ModelContext(container)
+            let fd = FetchDescriptor<AppLogEntry>()
+            if let items = try? ctx.fetch(fd) {
+                for it in items { ctx.delete(it) }
+                try? ctx.save()
+            }
         }
     }
 
-    static func exportURL() -> URL {
-        fileURL
+    // 공유용(버튼 눌렀을 때만) — 임시 파일 생성
+    static func exportURL() -> URL? {
+        guard let container else { return nil }
+        let ctx = ModelContext(container)
+
+        let fd = FetchDescriptor<AppLogEntry>(
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+        )
+        let items = (try? ctx.fetch(fd)) ?? []
+
+        let text = items.map {
+            "\(formatLocal($0.timestamp))\n\($0.message)\n"
+        }.joined(separator: "\n")
+
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("bglog.txt")
+
+        do {
+            try text.data(using: .utf8)?.write(to: url, options: .atomic)
+            return url
+        } catch {
+            return nil
+        }
     }
 
     // MARK: - Private
 
-    private static func formattedTime() -> String {
-        let formatter = DateFormatter()
-        // 1. 사용자의 현재 지역 설정을 따름
-        formatter.locale = Locale.current
-        formatter.timeZone = .current
-        
-        // 2. '시간, 분, 초'가 필요하다는 템플릿을 제공
-        // 시스템이 사용자 설정에 맞춰 "14:05:01" 또는 "2:05:01 PM"으로 변환합니다.
-        formatter.setLocalizedDateFormatFromTemplate("Hms")
-        
-        return formatter.string(from: Date())
-    }
+    private static func trimIfNeeded(context: ModelContext, maxCount: Int) {
+        // 1) 최신 maxCount개의 "마지막(가장 오래된) timestamp"를 구함
+        var fd = FetchDescriptor<AppLogEntry>(
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+        )
+        fd.fetchLimit = maxCount
 
-    private static func loadEntries() -> [Entry] {
-        guard let data = try? Data(contentsOf: fileURL) else { return [] }
-        // JSON 배열로 저장/로드
-        return (try? JSONDecoder().decode([Entry].self, from: data)) ?? []
-    }
-
-    private static func saveEntries(_ entries: [Entry]) {
-        do {
-            let data = try JSONEncoder().encode(entries)
-            try data.write(to: fileURL, options: .atomic)
-        } catch {
-            // 무한 루프 방지
+        guard let latest = try? context.fetch(fd),
+              latest.count == maxCount,
+              let cutoff = latest.last?.timestamp else {
+            return // 아직 maxCount 미만이면 trim 불필요
         }
+
+        // 2) cutoff 보다 "엄격히" 오래된 것만 삭제
+        let predicate = #Predicate<AppLogEntry> { $0.timestamp < cutoff }
+        var delFD = FetchDescriptor<AppLogEntry>(predicate: predicate)
+        delFD.fetchLimit = 500 // 한 번에 너무 많이 지우지 않도록
+
+        if let olds = try? context.fetch(delFD), !olds.isEmpty {
+            for o in olds { context.delete(o) }
+        }
+    }
+
+
+    private static func formattedTime() -> String {
+        let f = DateFormatter()
+        f.locale = .current
+        f.timeZone = .current
+//        f.setLocalizedDateFormatFromTemplate("Hms")
+        f.dateFormat = "HH:mm:ss"   // ✅ 고정 포맷
+        return f.string(from: Date())
+    }
+
+    private static func formatLocal(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.locale = .current
+        f.timeZone = .current
+        f.dateFormat = "yyyy.MM.dd HH:mm:ss"
+        return f.string(from: date)
     }
 }

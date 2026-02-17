@@ -53,11 +53,12 @@ class CoreMotionManager {
             let steps = data.numberOfSteps.intValue
             updateHandler(steps)
         }
+        //print("🚶‍♂️ CMPedometer 업데이트 시작됨")
     }
     
     // 모니터링 중지
     func stopMonitoring() {
         pedometer.stopUpdates()
-        print("🚶‍♂️ CMPedometer 업데이트 중지됨")
+        //print("🚶‍♂️ CMPedometer 업데이트 중지됨")
     }
 }

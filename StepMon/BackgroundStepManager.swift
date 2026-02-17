@@ -22,27 +22,25 @@ final class BackgroundStepManager {
     private let center = UNUserNotificationCenter.current()
     private(set) var modelContainer: ModelContainer?
 
-    // FG submit 과다 호출 방지용
+    // submit 과다 호출 방지용
     private let lastSubmitKey = "bnz.stepmon.lastSubmitDate"
     private let submitThrottleSeconds: TimeInterval = 30
 
-    // ✅ BG submit "earliest 밀림" 방지용 가드 (추천: 10~15분)
+    // ✅ BG submit "earliest 밀림" 방지용 가드 (15분)
     private let lastBgSubmitKey = "bnz.stepmon.lastBgSubmitDate"
-    private let bgResubmitGuardSeconds: TimeInterval = 3 * 60
+    private let bgResubmitGuardSeconds: TimeInterval = 15 * 60
 
     // ✅ BG pending 조회 자체 과다 호출 방지 (1~2분 추천)
-    private let lastBgCheckKey = "bnz.stepmon.lastBgCheckDate"
-    private let bgCheckThrottleSeconds: TimeInterval = 90
+//    private let lastBgCheckKey = "bnz.stepmon.lastBgCheckDate"
+//    private let bgCheckThrottleSeconds: TimeInterval = 90
     
     private let lastNotiSentKey = "bnz.stepmon.lastNotiSentDate"
     private let notiCooldownSeconds: TimeInterval = 15 * 60   // 15분동안 1번만 알림 받기위해
 
     // ✅ FG 즉시 체크 과다 호출 방지
-    private let lastFgCheckKey = "bnz.stepmon.lastFgCheckDate"
-    private let fgCheckCooldownSeconds: TimeInterval = 180
+//    private let lastFgCheckKey = "bnz.stepmon.lastFgCheckDate"
+//    private let fgCheckCooldownSeconds: TimeInterval = 180
 
-    // ✅ 중복 실행 방지
-    private var isFgChecking = false
     
     private init() {}
 
@@ -55,151 +53,79 @@ final class BackgroundStepManager {
             self.handleAppRefresh(task: task)
         }
 
-        AppLog.write("✅ registerBackgroundTask done", .red)
+        AppLog.write("✅ init() regBGAppRefreshTask", .green)
     }
 
     // MARK: - BG Task Handler
     private func handleAppRefresh(task: BGAppRefreshTask) {
-        AppLog.write("🚀 Task START", .red)
+        AppLog.write("🏁 Task 시작", .blue)
 
+        //pending count=0 확인용
+//        BGTaskScheduler.shared.getPendingTaskRequests { requests in
+//            let ids = requests.map { $0.identifier }.joined(separator: ",")
+//            AppLog.write("📌 pending count=\(requests.count) ids=[\(ids)]")
+//        }
+        
+        // 1. 다음 작업 예약 (작업 시작 시점에 미리 해두는 것이 연쇄 보장에 유리)
+        // 앞서 논의한 것처럼 '이미 예약된 건이 있으면 skip' 로직이 포함된 함수여야 함
+        let ok = self.submitRefreshRequest(path: "BG_RELAY")
+        if ok {
+            UserDefaults.standard.set(Date(), forKey: self.lastBgSubmitKey)
+        } else {
+            AppLog.write("🟠 BG_RELAY submit failed → lastBgSubmitDate not updated")
+        }
+        
         let finishLock = NSLock()
         var finished = false
 
-        @discardableResult
-        func finish(_ success: Bool, reason: String) -> Bool {
+        func finish(_ success: Bool, reason: String) {
             finishLock.lock()
             defer { finishLock.unlock() }
-
-            if finished {
-                AppLog.write("⚠️ finish called twice (reason=\(reason))")
-                return false
-            }
-
+            
+            guard !finished else { return }
             finished = true
-            AppLog.write("🏁 Task END success=\(success) reason=\(reason)")
+            
+            AppLog.write("🏁 Task 종료", .blue)
             task.setTaskCompleted(success: success)
-            return true
         }
 
-        // ⏰ 1. 시스템 만료 핸들러
+        // 2. 시스템 제공 만료 핸들러 (이것이 곧 Safety Timeout입니다)
         task.expirationHandler = {
-            AppLog.write("⏰ Task EXPIRED")
-            _ = finish(false, reason: "expired")
+            AppLog.write("⏰ 시스템 제공 타임아웃 발생 (Expiration)")
+            // 만약 여기서 작업 중인 스레드를 강제 종료해야 한다면 관련 로직 추가
+            finish(false, reason: "expired")
         }
 
-        // ⏱ 2. 안전 타임아웃 (25초)
-        let safetyTimeout = DispatchWorkItem {
-            AppLog.write("💥 Task SAFETY TIMEOUT")
-            _ = finish(false, reason: "safety_timeout")
-        }
-
-        DispatchQueue.global().asyncAfter(deadline: .now() + 25, execute: safetyTimeout)
-
-        // 🔎 3. 실제 작업
+        // 3. 실제 작업 실행
         checkStepsAndNotify(source: "bgTask") { success in
-            safetyTimeout.cancel()
-
-            if finish(success, reason: "completed") {
-                //self.scheduleAppRefreshBackground(reason: "after_run")
-                self.submitRefreshRequest(path: "FG")
-            }
+            // 작업이 완료되면 시스템 만료 핸들러가 호출되기 전에 먼저 종료
+            finish(success, reason: "completed")
         }
     }
     
-    
-    
-    // MARK: - Public Schedulers
-    // 포그라운드에서 즉시 체크 (submit 하지 않음)
-//    func runForegroundCheckIfNeeded(reason: String = "scene_active") {
-//        // 쿨다운
-//        if let last = UserDefaults.standard.object(forKey: lastFgCheckKey) as? Date {
-//            let delta = Date().timeIntervalSince(last)
-//            if delta < fgCheckCooldownSeconds {
-//                AppLog.write("🟢 FG check cooldown \(Int(delta))s/\(Int(fgCheckCooldownSeconds))s")
-//                return
-//            }
-//        }
-//
-//        // 중복 실행 방지
-//        if isFgChecking {
-//            AppLog.write("🟢 FG check skipped (already running)")
-//            return
-//        }
-//
-//        isFgChecking = true
-//        UserDefaults.standard.set(Date(), forKey: lastFgCheckKey)
-//
-//        AppLog.write("🟢 FG CHECK START (\(reason))")
-//
-//        checkStepsAndNotify { success in
-//            AppLog.write("🟢 FG CHECK END success=\(success)")
-//            self.isFgChecking = false
-//        }
-//    }
 
-    
-    
-    // 포그라운드
-    func scheduleAppRefreshForeground(reason: String = "foreground") {
-        AppLog.write("🟢🟢🟢 FG called (\(reason))", .green)
-//        guard throttleOK() else {
-//            AppLog.write("🟢 FG throttled")
-//            return
-//        }
-
-        BGTaskScheduler.shared.getPendingTaskRequests { requests in
-            let already = requests.contains(where: { $0.identifier == self.taskId })
-            AppLog.write("🟢 FG pendingCount=\(requests.count) already=\(already)")
-
-            if already { return }
-            let ok = self.submitRefreshRequest(path: "FG")
-            if !ok {
-                AppLog.write("🟢 FG submit failed")
-            }
-        }
-    }
      
-    /* **************
+    /// 백그라운드
     func scheduleAppRefreshBackground(reason: String = "background") {
-        //AppLog.write("🟠 schedule BG called (\(reason))")
-        AppLog.write("🟠 schedule BG called")
 
-        // (0) ✅ BG pending 조회 호출 자체를 90초로 제한 (로그/배터리 절약)
-        if let last = UserDefaults.standard.object(forKey: lastBgCheckKey) as? Date {
-            let delta = Date().timeIntervalSince(last)
-            if delta < bgCheckThrottleSeconds {
-                AppLog.write("🟠 BG check throttled =\(Int(delta))s / \(Int(bgCheckThrottleSeconds))s")
-                return
-            }
-        }
-        UserDefaults.standard.set(Date(), forKey: lastBgCheckKey)
-
-        // (1) 짧은 throttle(30초)
-//        guard throttleOK() else {
-//            AppLog.write("🟠 BG throttled(30s)")
-//            return
-//        }
-
-        // (2) ✅ BG 전용 가드
-        if let last = UserDefaults.standard.object(forKey: lastBgSubmitKey) as? Date {
-            let delta = Date().timeIntervalSince(last)
-            if delta < bgResubmitGuardSeconds {
-                AppLog.write("🟠 BG guard skip delta=\(Int(delta))s")
-                return
-            }
-        }
-
-        // (3) ✅ 먼저 pending만 확인 (여기선 beginBackgroundTask 안 함)
+        // ✅ pending check
         BGTaskScheduler.shared.getPendingTaskRequests { requests in
-            let already = requests.contains(where: { $0.identifier == self.taskId })
-            AppLog.write("🟠 BG pendingCount=\(requests.count) already=\(already)")
-
-            if already {
-                // ✅ pending이 있으면 submit도 안 하고, begin/endBackgroundTask도 안 함
-                return
+            let isPending = requests.contains(where: { $0.identifier == self.taskId })
+            AppLog.write("🟠 pendingCnt=\(requests.count)")
+            
+            // 이미 예약된 작업이 있으면 15분 가드를 적용
+            if isPending {
+                if let last = UserDefaults.standard.object(forKey: self.lastBgSubmitKey) as? Date {
+                    let delta = Date().timeIntervalSince(last)
+                    if delta < self.bgResubmitGuardSeconds { //15분
+                        // 이미 잘 예약되어 있고 시간도 얼마 안 됐으니 건드리지 않음 (Starvation 방지)
+                        AppLog.write("🟠 15분 skip: 기예약 (\(Int(delta))s/\(Int(self.bgResubmitGuardSeconds))s)")
+                        return
+                    }
+                }
             }
 
-            // (4) ✅ pending이 없을 때만 suspend 대비로 beginBackgroundTask 사용
+            // ✅ pending 없고, submit한지 15분 지났다.
             DispatchQueue.main.async {
                 var bgTask: UIBackgroundTaskIdentifier = .invalid
                 bgTask = UIApplication.shared.beginBackgroundTask(withName: "StepMon_BG_Submit") {
@@ -211,6 +137,7 @@ final class BackgroundStepManager {
                 }
 
                 let ok = self.submitRefreshRequest(path: "BG")
+                
                 if ok {
                     UserDefaults.standard.set(Date(), forKey: self.lastBgSubmitKey)
                 } else {
@@ -225,7 +152,6 @@ final class BackgroundStepManager {
             }
         }
     }
-    ******************* */
 
 
 
@@ -257,7 +183,7 @@ final class BackgroundStepManager {
         let now = Date()
         let startDate = now.addingTimeInterval(-interval)
 
-        AppLog.write("🔍 querySteps (\(readPref.checkIntervalMinutes)m) start=\(formatLocal(startDate)) end=\(formatLocal(now))", .red)
+        AppLog.write("🔍 querySteps (\(readPref.checkIntervalMinutes)m) \nstart=\(formatLocal(startDate)) end=\(formatLocal(now))", .red)
 
         CoreMotionManager.shared.querySteps(from: startDate, to: now) { steps in
             // ✅ BG에서도 안정적으로: 콜백 안에서 바로 저장
@@ -353,7 +279,6 @@ final class BackgroundStepManager {
     }
 
     // MARK: - Submit Helper
-
     @discardableResult
     private func submitRefreshRequest(path: String) -> Bool {
         let request = BGAppRefreshTaskRequest(identifier: taskId)
@@ -364,9 +289,9 @@ final class BackgroundStepManager {
             UserDefaults.standard.set(Date(), forKey: lastSubmitKey)
 
             if let earliest = request.earliestBeginDate {
-                AppLog.write("✅ submit success [\(path)] earliest=\(formatLocal(earliest))", .red)
+                AppLog.write("✅✅✅✅✅✅✅✅✅✅\nsubmit [\(path)] \(formatLocal(earliest))", .red)
             } else {
-                AppLog.write("✅ submit success [\(path)] earliest=nil", .red)
+                AppLog.write("✅✅✅✅✅✅✅✅✅✅\nsubmit [\(path)] earliest=nil", .red)
             }
 
 //            BGTaskScheduler.shared.getPendingTaskRequests { reqs in
@@ -398,7 +323,8 @@ final class BackgroundStepManager {
         
         // "jmm" 또는 "Hm" 템플릿을 사용하면 시스템 설정에 따라
         // 한국인은 "14:00", 미국인은 "2:00 PM"으로 알아서 보여줍니다.
-        f.setLocalizedDateFormatFromTemplate("Hm")
+//        f.setLocalizedDateFormatFromTemplate("Hm")
+        f.dateFormat = "HH:mm:ss" // ✅ 초까지 나오도록 변경
         
         return f.string(from: date)
     }
