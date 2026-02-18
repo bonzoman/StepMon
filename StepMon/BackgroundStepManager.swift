@@ -22,25 +22,10 @@ final class BackgroundStepManager {
     private let center = UNUserNotificationCenter.current()
     private(set) var modelContainer: ModelContainer?
 
-    // submit 과다 호출 방지용
+    // submit "earliest 밀림" 방지용 가드 (15분)
     private let lastSubmitKey = "bnz.stepmon.lastSubmitDate"
-    private let submitThrottleSeconds: TimeInterval = 30
-
-    // ✅ BG submit "earliest 밀림" 방지용 가드 (15분)
-    private let lastBgSubmitKey = "bnz.stepmon.lastBgSubmitDate"
     private let bgResubmitGuardSeconds: TimeInterval = 15 * 60
-
-    // ✅ BG pending 조회 자체 과다 호출 방지 (1~2분 추천)
-//    private let lastBgCheckKey = "bnz.stepmon.lastBgCheckDate"
-//    private let bgCheckThrottleSeconds: TimeInterval = 90
     
-    private let lastNotiSentKey = "bnz.stepmon.lastNotiSentDate"
-    private let notiCooldownSeconds: TimeInterval = 15 * 60   // 15분동안 1번만 알림 받기위해
-
-    // ✅ FG 즉시 체크 과다 호출 방지
-//    private let lastFgCheckKey = "bnz.stepmon.lastFgCheckDate"
-//    private let fgCheckCooldownSeconds: TimeInterval = 180
-
     
     private init() {}
 
@@ -58,7 +43,7 @@ final class BackgroundStepManager {
 
     // MARK: - BG Task Handler
     private func handleAppRefresh(task: BGAppRefreshTask) {
-        AppLog.write("🏁 Task 시작", .blue)
+        AppLog.write("🏁 Task 시작 ==========>", .blue)
 
         //pending count=0 확인용
 //        BGTaskScheduler.shared.getPendingTaskRequests { requests in
@@ -70,7 +55,7 @@ final class BackgroundStepManager {
         // 앞서 논의한 것처럼 '이미 예약된 건이 있으면 skip' 로직이 포함된 함수여야 함
         let ok = self.submitRefreshRequest(path: "BG_RELAY")
         if ok {
-            UserDefaults.standard.set(Date(), forKey: self.lastBgSubmitKey)
+            //UserDefaults.standard.set(Date(), forKey: self.lastBgSubmitKey)
         } else {
             AppLog.write("🟠 BG_RELAY submit failed → lastBgSubmitDate not updated")
         }
@@ -85,7 +70,7 @@ final class BackgroundStepManager {
             guard !finished else { return }
             finished = true
             
-            AppLog.write("🏁 Task 종료", .blue)
+            AppLog.write("🏁 <========== Task 종료", .blue)
             task.setTaskCompleted(success: success)
         }
 
@@ -115,7 +100,7 @@ final class BackgroundStepManager {
             
             // 이미 예약된 작업이 있으면 15분 가드를 적용
             if isPending {
-                if let last = UserDefaults.standard.object(forKey: self.lastBgSubmitKey) as? Date {
+                if let last = UserDefaults.standard.object(forKey: self.lastSubmitKey) as? Date {
                     let delta = Date().timeIntervalSince(last)
                     if delta < self.bgResubmitGuardSeconds { //15분
                         // 이미 잘 예약되어 있고 시간도 얼마 안 됐으니 건드리지 않음 (Starvation 방지)
@@ -139,7 +124,7 @@ final class BackgroundStepManager {
                 let ok = self.submitRefreshRequest(path: "BG")
                 
                 if ok {
-                    UserDefaults.standard.set(Date(), forKey: self.lastBgSubmitKey)
+                    //UserDefaults.standard.set(Date(), forKey: self.lastBgSubmitKey)
                 } else {
                     AppLog.write("🟠 BG submit failed → lastBgSubmitDate not updated")
                 }
@@ -222,14 +207,8 @@ final class BackgroundStepManager {
                 try writeContext.save()
                 AppLog.write("history saved steps=\(steps) noti=\(shouldNotify)", .red)
 
-                //알림 조건에 충족하더라도 15분동안 1번만 알림 보낸다!
                 if shouldNotify {
-//                    if self.notificationCooldownOK(now: now) {
-                        self.sendNotification(steps: steps, threshold: threshold)
-                        UserDefaults.standard.set(now, forKey: self.lastNotiSentKey)
-//                    } else {
-//                        AppLog.write("⛔️ notification skipped (cooldown)")
-//                    }
+                    self.sendNotification(steps: steps, threshold: threshold)
                 }
 
                 completion(true)
@@ -283,7 +262,6 @@ final class BackgroundStepManager {
     private func submitRefreshRequest(path: String) -> Bool {
         let request = BGAppRefreshTaskRequest(identifier: taskId)
         
-        
         // 그 외(BG_RELAY 등 연쇄 호출)라면 15분 후로 설정
         if path == "BG" { //15분 기다렸지만 여전히 pending 상태라면..
             request.earliestBeginDate = nil // nil로 설정하거나 Date()로 설정하면 "지금부터 즉시 실행 가능"을 의미합니다.
@@ -308,19 +286,13 @@ final class BackgroundStepManager {
 
             return true
         } catch {
-            AppLog.write("❌ submit failed [\(path)]: \(error)")
+            AppLog.write("❌❌❌❌❌ submit failed [\(path)]: \(error)")
             return false
         }
     }
 
 
-//    private func throttleOK() -> Bool {
-//        if let last = UserDefaults.standard.object(forKey: lastSubmitKey) as? Date {
-//            let delta = Date().timeIntervalSince(last)
-//            return delta >= submitThrottleSeconds
-//        }
-//        return true
-//    }
+
 
     private func formatLocal(_ date: Date) -> String {
         let f = DateFormatter()
@@ -334,14 +306,6 @@ final class BackgroundStepManager {
         f.dateFormat = "HH:mm:ss" // ✅ 초까지 나오도록 변경
         
         return f.string(from: date)
-    }
-
-    private func notificationCooldownOK(now: Date) -> Bool {
-        if let last = UserDefaults.standard.object(forKey: lastNotiSentKey) as? Date {
-            let delta = now.timeIntervalSince(last)
-            return delta >= notiCooldownSeconds
-        }
-        return true
     }
     
     // ✅ Silent Push(원격 알림)에서 호출할 공개 메서드

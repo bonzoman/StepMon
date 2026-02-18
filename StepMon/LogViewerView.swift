@@ -18,7 +18,8 @@ struct LogViewerView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         ForEach(logs.prefix(300)) { item in
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(item.timestamp, style: .time)
+//                                Text(item.timestamp, style: .time)
+                                Text(formatLocal(item.timestamp))
                                     .font(.system(.caption, design: .monospaced))
                                     .foregroundStyle(.secondary)
 
@@ -67,5 +68,19 @@ struct LogViewerView: View {
             vc.popoverPresentationController?.sourceView = root.view
             root.present(vc, animated: true)
         }
+    }
+    
+    private func formatLocal(_ date: Date) -> String {
+        let f = DateFormatter()
+        // 사용자의 지역 설정을 반영합니다.
+        f.locale = Locale.current
+        f.timeZone = .current
+        
+        // "jmm" 또는 "Hm" 템플릿을 사용하면 시스템 설정에 따라
+        // 한국인은 "14:00", 미국인은 "2:00 PM"으로 알아서 보여줍니다.
+//        f.setLocalizedDateFormatFromTemplate("Hm")
+        f.dateFormat = "HH:mm:ss" // ✅ 초까지 나오도록 변경
+        
+        return f.string(from: date)
     }
 }

@@ -62,8 +62,8 @@
             filePath = "StepMon/BackgroundStepManager.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "237"
-            endingLineNumber = "237"
+            startingLineNumber = "216"
+            endingLineNumber = "216"
             landmarkName = "checkStepsAndNotify(source:completion:)"
             landmarkType = "7">
          </BreakpointContent>
@@ -142,8 +142,8 @@
             filePath = "StepMon/BackgroundStepManager.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "114"
-            endingLineNumber = "114"
+            startingLineNumber = "99"
+            endingLineNumber = "99"
             landmarkName = "scheduleAppRefreshBackground(reason:)"
             landmarkType = "7">
          </BreakpointContent>
@@ -158,8 +158,8 @@
             filePath = "StepMon/BackgroundStepManager.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "117"
-            endingLineNumber = "117"
+            startingLineNumber = "102"
+            endingLineNumber = "102"
             landmarkName = "scheduleAppRefreshBackground(reason:)"
             landmarkType = "7">
          </BreakpointContent>
@@ -174,8 +174,8 @@
             filePath = "StepMon/BackgroundStepManager.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "113"
-            endingLineNumber = "113"
+            startingLineNumber = "98"
+            endingLineNumber = "98"
             landmarkName = "scheduleAppRefreshBackground(reason:)"
             landmarkType = "7">
          </BreakpointContent>
