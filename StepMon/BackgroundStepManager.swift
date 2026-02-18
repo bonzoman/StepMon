@@ -264,7 +264,8 @@ final class BackgroundStepManager {
         
         // 그 외(BG_RELAY 등 연쇄 호출)라면 15분 후로 설정
         if path == "BG" { //15분 기다렸지만 여전히 pending 상태라면..
-            request.earliestBeginDate = nil // nil로 설정하거나 Date()로 설정하면 "지금부터 즉시 실행 가능"을 의미합니다.
+            //request.earliestBeginDate = nil // nil로 설정하거나 Date()로 설정하면 "지금부터 즉시 실행 가능"을 의미합니다.
+            request.earliestBeginDate = Date(timeIntervalSinceNow: 1 * 60) //1분후 재예약
         } else if path == "BG_RELAY" { //15분 후로 예약된 게 실행된거기때문에 다음 15분 후로 예약 submit
             request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
         }
