@@ -68,13 +68,15 @@ struct ContentView: View {
                                 .shadow(color: .white.opacity(0.5), radius: 2, x: 0, y: 1)
                             
                             
-                            // ✅ 로그 버튼 추가 (설정 버튼 왼쪽)
-                            Button(action: { showLog = true }) {
-                                Image(systemName: "doc.text.magnifyingglass")
-                                    .font(.title2)
-                                    .foregroundStyle(.gray)
+                            if preferences.first?.isSuperUser == true {
+                                // ✅ 로그 버튼 추가 (설정 버튼 왼쪽)
+                                Button(action: { showLog = true }) {
+                                    Image(systemName: "doc.text.magnifyingglass")
+                                        .font(.title2)
+                                        .foregroundStyle(.gray)
+                                }
+                                .padding(.leading, 8)
                             }
-                            .padding(.leading, 8)
                             
                             
                             Button(action: { showSettings = true }) {
@@ -109,7 +111,7 @@ struct ContentView: View {
                                 
                                 Spacer()
                                 
-                                if let pref = preferences.first {
+                                if let pref = preferences.first, pref.isSuperUser {
                                     NavigationLink(destination: NotificationHistoryView()) {
                                         VStack(alignment: .trailing, spacing: 2) {
                                             Text("알림 체크")
@@ -270,13 +272,11 @@ struct ContentView: View {
                     
                     viewModel.fetchTodaySteps() // ✅ 자정 지나서 돌아오면 어제값 방지
                     
-                    //포그라운드 제거
-                    //BackgroundStepManager.shared.scheduleAppRefreshForeground(reason: "scene_active")
-                    
                     refreshRecentSteps() //최근 60분 걸음수 refresh
                     
+                    // TODO: device
                     //SettingsView에서 알람정보 upload 실패해서 pending건 있다면 재시도
-                    Task { await DeviceSettingsUploader.shared.flushIfNeeded() }
+                    //Task { await DeviceSettingsUploader.shared.flushIfNeeded() }
                     
                 case .background:
                     

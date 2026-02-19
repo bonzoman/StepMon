@@ -45,10 +45,10 @@ class UserPreference {
     var isSuperUser: Bool {
         let calendar = Calendar.current
         let startComp = calendar.dateComponents([.hour, .minute], from: startTime)
-        //let endComp = calendar.dateComponents([.hour, .minute], from: endTime)
+        let endComp = calendar.dateComponents([.hour, .minute], from: endTime)
         
         return startComp.hour == 0 && startComp.minute == 2
-        //&& endComp.hour == 23 && endComp.minute == 58
+        && endComp.hour == 23 && endComp.minute == 58
     }
     
     init(checkIntervalMinutes: Int = 60,
