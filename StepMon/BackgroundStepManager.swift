@@ -93,33 +93,46 @@ final class BackgroundStepManager {
     /// 백그라운드
     func scheduleAppRefreshBackground(reason: String = "background") {
 
+        // 1. 함수 시작 즉시 Background 시간을 확보.(중요)
+        var bgTask: UIBackgroundTaskIdentifier = .invalid
+        bgTask = UIApplication.shared.beginBackgroundTask(withName: "StepMon_BG_Submit") {
+            if bgTask != .invalid {
+                AppLog.write("⏰ BGTask expired → endBackgroundTask")
+                UIApplication.shared.endBackgroundTask(bgTask)
+                bgTask = .invalid
+            }
+        }
+
         // ✅ pending check
         BGTaskScheduler.shared.getPendingTaskRequests { requests in
             let isPending = requests.contains(where: { $0.identifier == self.taskId })
-            AppLog.write("🟠 pendingCnt=\(requests.count)")
+            
             
             // 이미 예약된 작업이 있으면 15분 가드를 적용
             if isPending {
-                if let last = UserDefaults.standard.object(forKey: self.lastSubmitKey) as? Date {
-                    let delta = Date().timeIntervalSince(last)
-                    if delta < self.bgResubmitGuardSeconds { //15분
-                        // 이미 잘 예약되어 있고 시간도 얼마 안 됐으니 건드리지 않음 (Starvation 방지)
-                        AppLog.write("🟠 15분 skip: 기예약 (\(Int(delta))s/\(Int(self.bgResubmitGuardSeconds))s)")
-                        return
-                    }
+                AppLog.write("🟠 pendingCnt=\(requests.count) 스킵")
+                // 확보했던 백그라운드 권한을 반환하고 즉시 종료
+                if bgTask != .invalid {
+                    UIApplication.shared.endBackgroundTask(bgTask)
                 }
+                return
+                
+//                if let last = UserDefaults.standard.object(forKey: self.lastSubmitKey) as? Date {
+//                    let delta = Date().timeIntervalSince(last)
+//                    if delta < self.bgResubmitGuardSeconds { //15분
+//                        // 이미 잘 예약되어 있고 시간도 얼마 안 됐으니 건드리지 않음 (Starvation 방지)
+//                        AppLog.write("🟠 15분 skip: 기예약 (\(Int(delta))s/\(Int(self.bgResubmitGuardSeconds))s)")
+//                        // ⚠️ 종료 시 반드시 확보한 시간을 풀어줘야 합니다.
+//                        if bgTask != .invalid {
+//                            UIApplication.shared.endBackgroundTask(bgTask)
+//                        }
+//                        return
+//                    }
+//                }
             }
+            AppLog.write("🟠 pendingCnt=\(requests.count)")
 
-            // ✅ pending 없고, submit한지 15분 지났다.
             DispatchQueue.main.async {
-                var bgTask: UIBackgroundTaskIdentifier = .invalid
-                bgTask = UIApplication.shared.beginBackgroundTask(withName: "StepMon_BG_Submit") {
-                    if bgTask != .invalid {
-                        AppLog.write("⏰ BGTask expired → endBackgroundTask")
-                        UIApplication.shared.endBackgroundTask(bgTask)
-                        bgTask = .invalid
-                    }
-                }
 
                 let ok = self.submitRefreshRequest(path: "BG")
                 
@@ -128,7 +141,7 @@ final class BackgroundStepManager {
                 } else {
                     AppLog.write("🟠 BG submit failed → lastBgSubmitDate not updated")
                 }
-
+                // 작업이 모두 끝났으니 Background 확보를 해제
                 if bgTask != .invalid {
                     AppLog.write("✅ endBackgroundTask (cleanup)")
                     UIApplication.shared.endBackgroundTask(bgTask)
@@ -264,8 +277,8 @@ final class BackgroundStepManager {
         
         // 그 외(BG_RELAY 등 연쇄 호출)라면 15분 후로 설정
         if path == "BG" { //15분 기다렸지만 여전히 pending 상태라면..
-            //request.earliestBeginDate = nil // nil로 설정하거나 Date()로 설정하면 "지금부터 즉시 실행 가능"을 의미합니다.
-            request.earliestBeginDate = Date(timeIntervalSinceNow: 1 * 60) //1분후 재예약
+//            request.earliestBeginDate = nil // nil로 설정하거나 Date()로 설정하면 "지금부터 즉시 실행 가능"을 의미합니다.
+            request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
         } else if path == "BG_RELAY" { //15분 후로 예약된 게 실행된거기때문에 다음 15분 후로 예약 submit
             request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
         }

@@ -174,13 +174,12 @@ struct SettingsView: View {
 
                         // ✅ 변경 있으면 1회 업로드 후 닫기
                         Task {
-                            // TODO: device
-//                            await DeviceSettingsUploader.shared.upsert(
-//                                isNotificationEnabled: pref.isNotificationEnabled,
-//                                startMinutes: minutesOfDay(pref.startTime),
-//                                endMinutes: minutesOfDay(pref.endTime),
-//                                timeZone: TimeZone.current.identifier
-//                            )
+                            await DeviceSettingsUploader.shared.upsert(
+                                isNotificationEnabled: pref.isNotificationEnabled,
+                                startMinutes: minutesOfDay(pref.startTime),
+                                endMinutes: minutesOfDay(pref.endTime),
+                                timeZone: TimeZone.current.identifier
+                            )
                             dismiss()
                         }
                     }

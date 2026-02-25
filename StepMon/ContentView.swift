@@ -274,9 +274,8 @@ struct ContentView: View {
                     
                     refreshRecentSteps() //최근 60분 걸음수 refresh
                     
-                    // TODO: device
                     //SettingsView에서 알람정보 upload 실패해서 pending건 있다면 재시도
-                    //Task { await DeviceSettingsUploader.shared.flushIfNeeded() }
+                    Task { await DeviceSettingsUploader.shared.flushIfNeeded() }
                     
                 case .background:
                     
