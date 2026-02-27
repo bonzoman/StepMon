@@ -9,6 +9,10 @@ struct SettingsView: View {
     // ✅ 초기값 스냅샷 저장용
     @State private var baseline: SettingsBaseline?
 
+    // ✅ 슈퍼유저 진입 제스처용 상태
+    @State private var secretTapCount = 0
+    @State private var lastSecretTapTime = Date.distantPast
+
     var body: some View {
         NavigationStack {
             Form {
@@ -53,53 +57,6 @@ struct SettingsView: View {
                         Text("설정된 시간(\(Text("\(pref.checkIntervalMinutes)분)").foregroundStyle(.blue)) 동안 \(Text("\(pref.stepThreshold)보").foregroundStyle(.blue)) 미만으로 걸으면 알림을 보냅니다.")
                     }
                     
-                    // 2. 알림 시간 설정
-                    Section {
-                        Toggle(isOn: Bindable(pref).isNotificationEnabled) {
-                            Label {
-                                Text("알림 활성화")
-                            } icon: {
-                                Image(systemName: pref.isNotificationEnabled ? "bell.fill" : "bell.slash.fill")
-                                    .foregroundStyle(pref.isNotificationEnabled ? .blue : .gray)
-                            }
-                        }
-                        .tint(.blue)
-                        
-                        if pref.isNotificationEnabled {
-                            // 시작 시간: 종료 시간 이전으로 제한
-                            DatePicker(selection: Bindable(pref).startTime, in: ...pref.endTime, displayedComponents: .hourAndMinute) {
-                                Label("알림 시작", systemImage: "sun.max.fill")
-                                    .foregroundStyle(.orange)
-                            }
-
-                            // 종료 시간: 시작 시간 이후로 제한
-                            DatePicker(selection: Bindable(pref).endTime, in: pref.startTime..., displayedComponents: .hourAndMinute) {
-                                Label("알림 종료", systemImage: "moon.stars.fill")
-                                    .foregroundStyle(.indigo)
-                            }
-                            
-                            // [추가] 필수 안내 문구 (주의사항)
-                            HStack(alignment: .top, spacing: 6) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundStyle(.red)
-                                    .font(.caption)
-                                    .padding(.top, 2)
-                                
-                                Text("앱을 강제 종료하거나 취침 등 장시간 미사용 시 알림을 위해 앱을 실행시켜 주세요.")
-                                    .font(.caption)
-                                    .foregroundStyle(.red)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            .padding(.vertical, 4)
-                        }
-                    } header: {
-                        Text("알림 시간 설정")
-                    } footer: {
-                        if !pref.isNotificationEnabled {
-                            Text("현재 모든 응원 알림이 꺼져 있습니다.")
-                                .foregroundStyle(.orange)
-                        }
-                    }
                     
                     // 3. 알림 히스토리 (모든 사용자에게 노출)
                     // 기존 슈퍼유저 섹션을 일반 섹션으로 변경 또는 통합
@@ -149,8 +106,41 @@ struct SettingsView: View {
                     
                 }
             }
-            .navigationTitle("설정")
+            // .navigationTitle("설정") // 숨겨진 제스처를 위해 principal 툴바로 대체
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("설정")
+                        .font(.headline)
+                        .contentShape(Rectangle()) // 터치 영역 확보
+                        .simultaneousGesture(
+                            LongPressGesture(minimumDuration: 1.0)
+                                .onEnded { _ in
+                                    if secretTapCount >= 5 {
+                                        if let pref = preferences.first {
+                                            pref.isSuperUser.toggle()
+                                            
+                                            let generator = UINotificationFeedbackGenerator()
+                                            generator.notificationOccurred(.success)
+                                            
+                                            AppLog.write("🤫 (Settings) SuperUser Mode: \(pref.isSuperUser ? "ON" : "OFF")", pref.isSuperUser ? .green : .red)
+                                        }
+                                        secretTapCount = 0
+                                    }
+                                }
+                        )
+                        .simultaneousGesture(
+                            TapGesture()
+                                .onEnded { _ in
+                                    let now = Date()
+                                    if now.timeIntervalSince(lastSecretTapTime) > 2.0 {
+                                        secretTapCount = 1
+                                    } else {
+                                        secretTapCount += 1
+                                    }
+                                    lastSecretTapTime = now
+                                }
+                        )
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("완료") {
                         guard let pref = preferences.first else {

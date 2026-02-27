@@ -27,6 +27,7 @@ class UserPreference {
     var isNotificationEnabled: Bool = false // 알림 마스터 스위치 상태
     var lastWinDate: Date? = nil // 마지막 대박 당첨 시간
     var lastAdDate: Date? = nil // 마지막 광고 시청 시간
+    var isSuperUser: Bool = false // 슈퍼유저 여부 (이스터 에그로 토글)
 
     // 나중에 사용할 용됴
     var fcmToken: String? = nil //FCM 토큰
@@ -41,15 +42,6 @@ class UserPreference {
     var vs9: String? = nil
 
     
-    // 슈퍼유저 판별 로직
-    var isSuperUser: Bool {
-        let calendar = Calendar.current
-        let startComp = calendar.dateComponents([.hour, .minute], from: startTime)
-        let endComp = calendar.dateComponents([.hour, .minute], from: endTime)
-        
-        return startComp.hour == 0 && startComp.minute == 2
-        && endComp.hour == 23 && endComp.minute == 58
-    }
     
     init(checkIntervalMinutes: Int = 60,
          stepThreshold: Int = 100,
@@ -79,6 +71,7 @@ class UserPreference {
         self.bgCheckDate = Date()
         self.lastWinDate = nil
         self.lastAdDate = nil // 초기값은 광고를 본 적 없는 상태
+        self.isSuperUser = false
     }
 }
 
