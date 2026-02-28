@@ -1,7 +1,20 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "StepMon"
+          }
+        }
+      }
+    },
     "NSMotionUsageDescription" : {
+      "comment" : "Privacy - Motion Usage Description",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -24,6 +37,7 @@
       }
     },
     "NSUserTrackingUsageDescription" : {
+      "comment" : "Privacy - Tracking Usage Description",
       "localizations" : {
         "en" : {
           "stringUnit" : {

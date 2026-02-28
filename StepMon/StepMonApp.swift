@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import UserNotifications
+import AppTrackingTransparency // ATT 임포트 추가
 import GoogleMobileAds // AdMob 임포트 추가
 
 // 1. 앱이 켜져있을 때 알림 처리를 위한 AppDelegate 클래스 정의
@@ -10,9 +11,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
 
-        MobileAds.shared.start(completionHandler: nil) //AdMob SDK 초기화
-
-        // 알림 센터 delegate
+        // ✅ 알림 센터 delegate
         let center = UNUserNotificationCenter.current()
         center.delegate = self
             
@@ -32,6 +31,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             
         return true
     }
+
 
     // ✅ deviceToken 발급 성공: 여기 찍힌 문자열을 SpringBoot의 deviceToken에 그대로 넣으면 됨
     func application(
@@ -96,36 +96,25 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 @main
 struct StepMonitorApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @Environment(\.scenePhase) private var scenePhase // 앱 상태 감시용
     
     let container: ModelContainer
     
     init() {
+        // ... (생략된 기존 초기화 코드 동일)
         do {
-            // NotificationHistory.self를 추가하여 두 모델을 모두 관리하도록 설정
             container = try ModelContainer(for: UserPreference.self,
                                            NotificationHistory.self,
                                            AppLogEntry.self)
-            
             AppLog.configure(container: container)
-            
             let context = ModelContext(container)
-            
-            // 초기 데이터 확인 및 생성
             let descriptor = FetchDescriptor<UserPreference>()
             if (try? context.fetch(descriptor).count) == 0 {
                 context.insert(UserPreference())
             }
-            
-            // 백그라운드 매니저 초기화 및 등록
             BackgroundStepManager.shared.registerBackgroundTask(container: container)
-                        
-            Task {
-                await DeviceTokenUploader.shared.flushIfNeeded()
-            }
-            Task {
-                await DeviceSettingsUploader.shared.flushIfNeeded()
-            }
-            
+            Task { await DeviceTokenUploader.shared.flushIfNeeded() }
+            Task { await DeviceSettingsUploader.shared.flushIfNeeded() }
         } catch {
             fatalError("Failed to create ModelContainer: \(error)")
         }
@@ -136,5 +125,23 @@ struct StepMonitorApp: App {
             ContentView()
         }
         .modelContainer(container)
+        // ✅ 앱 상태가 활성화될 때마다 호출되지만, 시스템이 권한 팝업을 띄울 필요가 있을 때만 띄워줍니다.
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            if newPhase == .active {
+                requestTrackingAuthorization()
+            }
+        }
+    }
+
+    private func requestTrackingAuthorization() {
+        // 약간의 지연을 주어 앱 UI가 안정된 후 팝업이 뜨도록 함
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            ATTrackingManager.requestTrackingAuthorization { status in
+                print("🔍 ATT 권한 상태: \(status.rawValue)")
+                
+                // 권한 응답 후(또는 이미 결정된 후) AdMob SDK 초기화
+                MobileAds.shared.start(completionHandler: nil)
+            }
+        }
     }
 }
