@@ -1,0 +1,50 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "NSMotionUsageDescription" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Motion detection permission is required to display step counts in the widget."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ウィジェットで歩数を表示するために、動作感知の権限が必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "위젯에서 걸음 수를 표시하기 위해 동작 감지 권한이 필요합니다."
+          }
+        }
+      }
+    },
+    "NSUserTrackingUsageDescription" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Please allow us to track your activity to provide personalized advertisements."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "パーソナライズされた広告を提供するために、ユーザーのアクティビティを追跡することを許可してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "개인 맞춤형 광고를 제공하기 위해 사용자의 활동을 추적할 수 있도록 허용해주세요."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

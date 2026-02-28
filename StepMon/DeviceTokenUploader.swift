@@ -4,7 +4,7 @@ actor DeviceTokenUploader {
     static let shared = DeviceTokenUploader()
 
     // ✅ 너 서버 주소로 바꾸기
-    private let endpoint = URL(string: "http://192.168.0.205:8888/api/device/register")!
+    private let endpoint = URL(string: "http://192.168.0.212:5555/api/device/register")!
 
     private let pendingKey = "bnz.stepmon.pendingDeviceReg"
     private let lastSentTokenKey = "bnz.stepmon.lastSentDeviceToken"

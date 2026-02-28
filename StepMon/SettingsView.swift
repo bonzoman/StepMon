@@ -166,8 +166,6 @@ struct SettingsView: View {
                         Task {
                             await DeviceSettingsUploader.shared.upsert(
                                 isNotificationEnabled: pref.isNotificationEnabled,
-                                startMinutes: minutesOfDay(pref.startTime),
-                                endMinutes: minutesOfDay(pref.endTime),
                                 timeZone: TimeZone.current.identifier
                             )
                             dismiss()
@@ -207,22 +205,11 @@ struct SettingsView: View {
     
     private struct SettingsBaseline: Equatable {
         let isNotificationEnabled: Bool
-        let startMinutes: Int
-        let endMinutes: Int
         let timeZone: String
 
         init(pref: UserPreference, timeZone: String) {
             self.isNotificationEnabled = pref.isNotificationEnabled
-            self.startMinutes = SettingsBaseline.minutesOfDay(pref.startTime)
-            self.endMinutes = SettingsBaseline.minutesOfDay(pref.endTime)
             self.timeZone = timeZone
-        }
-
-        private static func minutesOfDay(_ date: Date) -> Int {
-            var cal = Calendar.current
-            cal.timeZone = TimeZone.current
-            let comps = cal.dateComponents([.hour, .minute], from: date)
-            return (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
         }
     }
 

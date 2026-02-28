@@ -4,7 +4,7 @@ actor DeviceSettingsUploader {
     static let shared = DeviceSettingsUploader()
 
     // ✅ 너 서버 주소로 바꾸기
-    private let endpoint = URL(string: "http://192.168.0.205:8888/api/device/settings")!
+    private let endpoint = URL(string: "http://192.168.0.212:5555/api/device/settings")!
 
     private let pendingKey = "bnz.stepmon.pendingDeviceSettings"
     private var isSending = false
@@ -12,8 +12,6 @@ actor DeviceSettingsUploader {
     struct Payload: Codable {
         let installId: String
         let isNotificationEnabled: Bool
-        let startMinutes: Int
-        let endMinutes: Int
         let timeZone: String
 
         let platform: String
@@ -22,7 +20,7 @@ actor DeviceSettingsUploader {
     }
 
     /// Settings 변경 시 호출
-    func upsert(isNotificationEnabled: Bool, startMinutes: Int, endMinutes: Int, timeZone: String) {
+    func upsert(isNotificationEnabled: Bool, timeZone: String) {
         Task {
             let installId = await MainActor.run { InstallIdManager.installId }
             let appVersion = await MainActor.run {
@@ -32,8 +30,6 @@ actor DeviceSettingsUploader {
             let payload = Payload(
                 installId: installId,
                 isNotificationEnabled: isNotificationEnabled,
-                startMinutes: startMinutes,
-                endMinutes: endMinutes,
                 timeZone: timeZone,
                 platform: "iOS",
                 appVersion: appVersion,
