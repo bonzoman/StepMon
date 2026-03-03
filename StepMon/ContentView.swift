@@ -149,7 +149,7 @@ struct ContentView: View {
                                 ZStack(alignment: .leading) {
                                     Capsule()
                                         .frame(width: geometry.size.width, height: 20)
-                                        .opacity(0.1)
+                                        .opacity(0.12)
                                         .foregroundColor(.black)
                                     
                                     Capsule()
@@ -211,7 +211,7 @@ struct ContentView: View {
                                         Text("알림")
                                             .font(.caption) // 크기 상향
                                             .fontWeight(.medium)
-                                            .foregroundStyle(.primary) // 다크모드 시인성 개선
+                                            .foregroundStyle(.black) // 배경색이 하얀색일 경우 잘 보이도록 색상 고정
                                         
                                         Button {
                                             showNotifTooltip.toggle()
@@ -441,7 +441,7 @@ private struct RecentStepsBanner: View {
 
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.circle.fill")
-                .foregroundStyle(below ? .orange : .primary)
+                .foregroundStyle(below ? .orange : .black)
 
             if let steps {
                 
@@ -450,9 +450,10 @@ private struct RecentStepsBanner: View {
                         .bold()
                 //MARK: 최근 60분 동안 500보 걸었어요. (Localizable.xcstrings 파일에 "RECENT_STEPS_STRING" 문구 있음)
                 Text("RECENT_STEPS_STRING \(intervalMinutes) \(styledSteps)")
+                    .foregroundColor(.black)
             } else {
                 Text("최근 걸음 수를 확인 중…")
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(.black)
             }
 
             Spacer()
@@ -460,7 +461,7 @@ private struct RecentStepsBanner: View {
         .font(.subheadline)
         .padding(.vertical, 10)
         .padding(.horizontal, 12)
-        .background(.thinMaterial)
+        .background(Color.white.opacity(0.85)) // 배경색이 연한 흰색 계열로 고정되어도 잘 보이도록 명시적 배경 지정
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.primary.opacity(0.12), lineWidth: 1)

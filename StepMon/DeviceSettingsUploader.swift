@@ -4,7 +4,7 @@ actor DeviceSettingsUploader {
     static let shared = DeviceSettingsUploader()
 
     // ✅ 너 서버 주소로 바꾸기
-    private let endpoint = URL(string: "http://192.168.0.212:5555/api/device/settings")!
+    private let endpoint = URL(string: "http://192.168.0.213:5555/api/device/settings")!
 
     private let pendingKey = "bnz.stepmon.pendingDeviceSettings"
     private var isSending = false
