@@ -26,6 +26,8 @@ final class BackgroundStepManager {
     private let lastSubmitKey = "bnz.stepmon.lastSubmitDate"
     private let bgResubmitGuardSeconds: TimeInterval = 15 * 60
     
+    private let lastNotificationDateKey = "bnz.stepmon.lastNotificationDate"
+    private let notificationIntervalLimit: TimeInterval = 15 * 60
     
     private init() {}
 
@@ -221,7 +223,15 @@ final class BackgroundStepManager {
                 AppLog.write("history saved steps=\(steps) noti=\(shouldNotify)", .red)
 
                 if shouldNotify {
-                    self.sendNotification(steps: steps, threshold: threshold)
+                    let lastNotiDate = UserDefaults.standard.object(forKey: self.lastNotificationDateKey) as? Date
+                    let elapsed = lastNotiDate.map { Date().timeIntervalSince($0) } ?? 999999
+                    
+                    if elapsed >= self.notificationIntervalLimit {
+                        self.sendNotification(steps: steps, threshold: threshold)
+                        UserDefaults.standard.set(now, forKey: self.lastNotificationDateKey)
+                    } else {
+                        AppLog.write("🟠 15분 가드: 알림 스킵 (\(Int(elapsed))s/\(Int(self.notificationIntervalLimit))s)", .red)
+                    }
                 }
 
                 completion(true)
