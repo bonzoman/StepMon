@@ -58,6 +58,55 @@ struct SettingsView: View {
                     }
                     
                     
+                    // 2. 알림 시간 설정
+                    Section {
+                        Toggle(isOn: Bindable(pref).isNotificationEnabled) {
+                            Label {
+                                Text("알림 활성화")
+                            } icon: {
+                                Image(systemName: pref.isNotificationEnabled ? "bell.fill" : "bell.slash.fill")
+                                    .foregroundStyle(pref.isNotificationEnabled ? .blue : .gray)
+                            }
+                        }
+                        .tint(.blue)
+                        
+                        if pref.isNotificationEnabled {
+                            // 시작 시간: 종료 시간 이전으로 제한
+                            DatePicker(selection: Bindable(pref).startTime, in: ...pref.endTime, displayedComponents: .hourAndMinute) {
+                                Label("알림 시작", systemImage: "sun.max.fill")
+                                    .foregroundStyle(.orange)
+                            }
+
+                            // 종료 시간: 시작 시간 이후로 제한
+                            DatePicker(selection: Bindable(pref).endTime, in: pref.startTime..., displayedComponents: .hourAndMinute) {
+                                Label("알림 종료", systemImage: "moon.stars.fill")
+                                    .foregroundStyle(.indigo)
+                            }
+                            
+                            // [추가] 필수 안내 문구 (주의사항)
+                            HStack(alignment: .top, spacing: 6) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(.red)
+                                    .font(.caption)
+                                    .padding(.top, 2)
+                                
+                                Text("앱을 강제 종료하거나 취침 등 장시간 미사용 시 알림을 위해 앱을 실행시켜 주세요.")
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    } header: {
+                        Text("알림 시간 설정")
+                    } footer: {
+                        if !pref.isNotificationEnabled {
+                            Text("현재 모든 응원 알림이 꺼져 있습니다.")
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                    
+                    
                     // 3. 알림 히스토리 (모든 사용자에게 노출)
                     // 기존 슈퍼유저 섹션을 일반 섹션으로 변경 또는 통합
                     Section {
@@ -166,6 +215,8 @@ struct SettingsView: View {
                         Task {
                             await DeviceSettingsUploader.shared.upsert(
                                 isNotificationEnabled: pref.isNotificationEnabled,
+                                startMinutes: minutesOfDay(pref.startTime),
+                                endMinutes: minutesOfDay(pref.endTime),
                                 timeZone: TimeZone.current.identifier
                             )
                             dismiss()
@@ -205,12 +256,22 @@ struct SettingsView: View {
     
     private struct SettingsBaseline: Equatable {
         let isNotificationEnabled: Bool
+        let startMinutes: Int
+        let endMinutes: Int
         let timeZone: String
 
         init(pref: UserPreference, timeZone: String) {
             self.isNotificationEnabled = pref.isNotificationEnabled
+            self.startMinutes = SettingsBaseline.minutesOfDay(pref.startTime)
+            self.endMinutes = SettingsBaseline.minutesOfDay(pref.endTime)
             self.timeZone = timeZone
         }
+        private static func minutesOfDay(_ date: Date) -> Int {
+            var cal = Calendar.current
+            cal.timeZone = TimeZone.current
+            let comps = cal.dateComponents([.hour, .minute], from: date)
+            return (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
+        }        
     }
 
 

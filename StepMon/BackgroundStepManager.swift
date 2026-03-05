@@ -195,9 +195,8 @@ final class BackgroundStepManager {
                     writePref.bgCheckSteps = steps
                     writePref.bgCheckDate = now
                 }
-
-                // [수정] 시간 범위 체크 제거: 알림이 켜져있으면 무조건 체크
-                let shouldNotify = (steps < threshold) && isNotifEnabled
+                let isTimeValid = self.isTimeInRange(start: startTime, end: endTime)
+                let shouldNotify = (steps < threshold) && isTimeValid && isNotifEnabled
 
                 // ✅ 히스토리 무조건 기록
                 let history = NotificationHistory(

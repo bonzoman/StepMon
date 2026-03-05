@@ -12,6 +12,8 @@ actor DeviceSettingsUploader {
     struct Payload: Codable {
         let installId: String
         let isNotificationEnabled: Bool
+        let startMinutes: Int
+        let endMinutes: Int
         let timeZone: String
 
         let platform: String
@@ -20,7 +22,7 @@ actor DeviceSettingsUploader {
     }
 
     /// Settings 변경 시 호출
-    func upsert(isNotificationEnabled: Bool, timeZone: String) {
+    func upsert(isNotificationEnabled: Bool, startMinutes: Int, endMinutes: Int, timeZone: String) {
         Task {
             let installId = await MainActor.run { InstallIdManager.installId }
             let appVersion = await MainActor.run {
@@ -30,6 +32,8 @@ actor DeviceSettingsUploader {
             let payload = Payload(
                 installId: installId,
                 isNotificationEnabled: isNotificationEnabled,
+                startMinutes: startMinutes,
+                endMinutes: endMinutes,
                 timeZone: timeZone,
                 platform: "iOS",
                 appVersion: appVersion,

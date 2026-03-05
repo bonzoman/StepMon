@@ -423,6 +423,8 @@ struct ContentView: View {
         Task {
             await DeviceSettingsUploader.shared.upsert(
                 isNotificationEnabled: pref.isNotificationEnabled,
+                startMinutes: 0,
+                endMinutes: 1439,                
                 timeZone: TimeZone.current.identifier
             )
         }
