@@ -410,12 +410,20 @@ struct ContentView: View {
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
         
+        // startTime/endTime → 분 단위 변환
+        var cal = Calendar.current
+        cal.timeZone = TimeZone.current
+        let sc = cal.dateComponents([.hour, .minute], from: pref.startTime)
+        let ec = cal.dateComponents([.hour, .minute], from: pref.endTime)
+        let startMin = (sc.hour ?? 9) * 60 + (sc.minute ?? 0)
+        let endMin   = (ec.hour ?? 18) * 60 + (ec.minute ?? 0)
+
         // 서버 동기화
         Task {
             await DeviceSettingsUploader.shared.upsert(
                 isNotificationEnabled: pref.isNotificationEnabled,
-                startMinutes: 0,
-                endMinutes: 1439,                
+                startMinutes: startMin,
+                endMinutes: endMin,
                 timeZone: TimeZone.current.identifier
             )
         }
