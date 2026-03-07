@@ -56,12 +56,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
                 let (startMin, endMin, tz) = await MainActor.run { [weak self] () -> (Int, Int, String) in
                     let tzId = TimeZone.current.identifier
                     guard let container = self?.modelContainer else {
-                        return (9 * 60, 22 * 60, tzId) // container 미주입 시 기본값
+                        return (9 * 60, 18 * 60, tzId) // container 미주입 시 기본값
                     }
                     let ctx = ModelContext(container)
                     let prefs = (try? ctx.fetch(FetchDescriptor<UserPreference>())) ?? []
                     guard let pref = prefs.first else {
-                        return (9 * 60, 22 * 60, tzId)
+                        return (9 * 60, 18 * 60, tzId)
                     }
                     var cal = Calendar.current
                     cal.timeZone = TimeZone.current

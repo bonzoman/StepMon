@@ -47,7 +47,7 @@ class UserPreference {
          stepThreshold: Int = 100,
          isNotificationEnabled: Bool = true,
          startTime: Date = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date())!,
-         endTime: Date = Calendar.current.date(bySettingHour: 22, minute: 0, second: 0, of: Date())!) {
+         endTime: Date = Calendar.current.date(bySettingHour: 18, minute: 0, second: 0, of: Date())!) {
         
         self.checkIntervalMinutes = checkIntervalMinutes
         self.stepThreshold = stepThreshold
