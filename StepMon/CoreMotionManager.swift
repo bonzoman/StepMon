@@ -9,6 +9,13 @@
 
 import Foundation
 import CoreMotion
+import SwiftUI
+
+struct DailyStep: Identifiable {
+    let id = UUID()
+    let date: Date
+    let steps: Int
+}
 
 class CoreMotionManager {
     static let shared = CoreMotionManager()
@@ -22,7 +29,6 @@ class CoreMotionManager {
     }
     
     // 2. 특정 기간(과거~현재)의 걸음 수 조회 (백그라운드 작업용)
-    // CoreMotion은 쿼리 방식이 매우 빠르며 최근 데이터 반영이 즉각적입니다.
     func querySteps(from start: Date, to end: Date, completion: @escaping (Int) -> Void) {
         guard checkAvailability() else {
             print("❌ 기기에서 걸음 수 측정을 지원하지 않습니다.")
@@ -42,8 +48,7 @@ class CoreMotionManager {
         }
     }
     
-    // 3. 실시간 걸음 수 업데이트 (UI용 - 앱이 켜져있을 때 사용)
-    // startUpdates를 사용하면 걸을 때마다 콜백이 옵니다.
+    // 3. 실시간 걸음 수 업데이트 (UI용)
     func startMonitoring(from start: Date, updateHandler: @escaping (Int) -> Void) {
         guard checkAvailability() else { return }
         
@@ -53,12 +58,39 @@ class CoreMotionManager {
             let steps = data.numberOfSteps.intValue
             updateHandler(steps)
         }
-        //print("🚶‍♂️ CMPedometer 업데이트 시작됨")
     }
     
     // 모니터링 중지
     func stopMonitoring() {
         pedometer.stopUpdates()
-        //print("🚶‍♂️ CMPedometer 업데이트 중지됨")
+    }
+    
+    // 4. 최근 N일간의 일별 걸음수 조회 (Swift Concurrency 사용)
+    func queryDailySteps(days: Int) async -> [DailyStep] {
+        let calendar = Calendar.current
+        let now = Date()
+        var results: [DailyStep] = []
+        
+        for i in 0..<days {
+            guard let targetDate = calendar.date(byAdding: .day, value: -i, to: now) else { continue }
+            let start = calendar.startOfDay(for: targetDate)
+            let end: Date
+            
+            if i == 0 {
+                end = now
+            } else {
+                end = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: targetDate) ?? targetDate
+            }
+            
+            let steps = await withCheckedContinuation { continuation in
+                querySteps(from: start, to: end) { steps in
+                    continuation.resume(returning: steps)
+                }
+            }
+            results.append(DailyStep(date: start, steps: steps))
+        }
+        
+        return results.reversed()
     }
 }
+

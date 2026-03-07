@@ -46,8 +46,8 @@
             filePath = "StepMon/ContentView.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "386"
-            endingLineNumber = "386"
+            startingLineNumber = "362"
+            endingLineNumber = "362"
             landmarkName = "calculateLifeWater(pref:currentSteps:)"
             landmarkType = "7">
          </BreakpointContent>

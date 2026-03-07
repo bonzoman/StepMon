@@ -16,9 +16,9 @@ struct ContentView: View {
     @State private var rewardColor: Color = .blue
     
     // beginBackgroundTask 토큰
-    @State private var bgTaskId: UIBackgroundTaskIdentifier = .invalid
     @State private var showLog = false
     @State private var showNotifTooltip = false
+    @State private var showHistory = false // [추가] 통계 화면 표시 여부
     
     @State private var recentSteps: Int? = nil
     @State private var recentCheckedAt: Date? = nil
@@ -70,9 +70,17 @@ struct ContentView: View {
                             
                             
                             if preferences.first?.isSuperUser == true {
-                                // ✅ 로그 버튼 추가 (설정 버튼 왼쪽)
+                                // ✅ 로그 버튼
                                 Button(action: { showLog = true }) {
                                     Image(systemName: "doc.text.magnifyingglass")
+                                        .font(.title2)
+                                        .foregroundStyle(.gray)
+                                }
+                                .padding(.leading, 8)
+                                
+                                // ✅ 알림 체크 (슈퍼유저용) - 로그 버튼과 스타일 통일
+                                NavigationLink(destination: NotificationHistoryView()) {
+                                    Image(systemName: "bell.badge.fill")
                                         .font(.title2)
                                         .foregroundStyle(.gray)
                                 }
@@ -108,37 +116,56 @@ struct ContentView: View {
                                         .font(.headline)
                                         .foregroundStyle(.black.opacity(0.6))
                                         .padding(.bottom, 8)
+                                    
+                                    // [추가] 통계 버튼
+                                    Button(action: { showHistory = true }) {
+                                        Image(systemName: "chart.bar.fill")
+                                            .font(.subheadline)
+                                            .foregroundStyle(.blue.opacity(0.7))
+                                            .padding(8)
+                                            .background(Color.blue.opacity(0.1))
+                                            .clipShape(Circle())
+                                    }
+                                    .padding(.bottom, 6)
                                 }
                                 
                                 Spacer()
                                 
-                                if let pref = preferences.first, pref.isSuperUser {
-                                    NavigationLink(destination: NotificationHistoryView()) {
-                                        VStack(alignment: .trailing, spacing: 2) {
-                                            Text("알림 체크")
+                                if let pref = preferences.first {
+                                    // [위치 이동] 생명수 영역 우측에 있던 토글을 이쪽으로 배치
+                                    VStack(alignment: .trailing, spacing: 4) {
+                                        HStack(spacing: 4) {
+                                            Text("알림")
                                                 .font(.caption2)
-                                                .foregroundStyle(.black.opacity(0.5))
+                                                .fontWeight(.medium)
+                                                .foregroundStyle(.black.opacity(0.6))
                                             
-                                            HStack(spacing: 4) {
-                                                // [핵심 변경] pref.bgCheckSteps 대신 히스토리의 가장 최신 값을 표시
-                                                Text("\(histories.first?.steps ?? 0)")
-                                                    .fontWeight(.bold)
-                                                Text("•")
-                                                Text(histories.first?.timestamp.formatted(date: .omitted, time: .shortened) ?? "--:--")
-                                                
-                                                Image(systemName: "chevron.right")
-                                                    .font(.system(size: 8, weight: .bold))
-                                                    .foregroundStyle(.black.opacity(0.3))
+                                            Button {
+                                                showNotifTooltip.toggle()
+                                            } label: {
+                                                Image(systemName: "questionmark.circle.fill")
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.blue.opacity(0.6))
                                             }
-                                            .font(.caption)
-                                            .monospacedDigit()
-                                            .foregroundStyle(.black.opacity(0.7))
+                                            .popover(isPresented: $showNotifTooltip) {
+                                                Text("설정된 시간(\(Text("\(pref.checkIntervalMinutes)분)").foregroundStyle(.blue)) 동안 \(Text("\(pref.stepThreshold)보").foregroundStyle(.blue)) 미만으로 걸으면 알림을 보냅니다.")
+                                                    .font(.subheadline)
+                                                    .multilineTextAlignment(.leading)
+                                                    .fixedSize(horizontal: false, vertical: true)
+                                                    .frame(width: 280)
+                                                    .padding()
+                                                    .presentationCompactAdaptation(.popover)
+                                            }
                                         }
-                                        .padding(.vertical, 4)
-                                        .padding(.leading, 8)
-                                        .contentShape(Rectangle())
+                                        
+                                        Toggle("", isOn: Binding(
+                                            get: { pref.isNotificationEnabled },
+                                            set: { _ in toggleNotification(pref: pref) }
+                                        ))
+                                        .labelsHidden()
+                                        .scaleEffect(0.8)
+                                        .tint(.blue)
                                     }
-                                    .buttonStyle(.plain)
                                     .padding(.bottom, 8)
                                 }
                             }
@@ -165,83 +192,46 @@ struct ContentView: View {
                         }
                         
                         if let pref = preferences.first {
-                            HStack(spacing: 20) {
-                                VStack(spacing: 8) {
-                                    HStack {
-                                        Image(systemName: "drop.fill")
-                                            .foregroundStyle(rewardColor) // 색상 변화 대응
-                                        
-                                        Text("\(pref.lifeWater)")
-                                            .font(.system(size: 24, weight: .bold, design: .rounded))
-                                            .contentTransition(.numericText())
-                                            .scaleEffect(rewardPulse) // 숫자 펄스 효과
-                                            .lineLimit(1)              // 무조건 한 줄로 표시
-                                            .minimumScaleFactor(0.5)   // 공간 부족 시 원래 크기의 50%까지 축소해서라도 다 보여줌
-                                            .layoutPriority(1)         // 다른 텍스트보다 공간을 먼저 차지하도록 우선순위 부여
-                                        Text("생명수")
-                                            .font(.caption)
-                                            .foregroundStyle(.gray)
-                                    }
+
+                            
+
+                            VStack(spacing: 5) {
+                                HStack {
+                                    Image(systemName: "drop.fill")
+                                        .foregroundStyle(rewardColor) // 색상 변화 대응
                                     
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("오늘 획득: \(pref.dailyEarnedWater) / \(maxDailyWater)")
-                                            .font(.caption) // 크기 상향 (생명수 문구와 동일하게)
-                                            .foregroundStyle(.secondary)
-                                        
-                                        ProgressView(value: Double(pref.dailyEarnedWater), total: Double(maxDailyWater))
-                                            .progressViewStyle(.linear)
-                                            .frame(minWidth: 140) // 너비 확대
-                                            .tint(pref.isSuperUser ? .orange : .blue)
-                                    }
+                                    Text("\(pref.lifeWater)")
+                                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                                        .contentTransition(.numericText())
+                                        .scaleEffect(rewardPulse) // 숫자 펄스 효과
+                                        .lineLimit(1)              // 무조건 한 줄로 표시
+                                        .minimumScaleFactor(0.5)   // 공간 부족 시 원래 크기의 50%까지 축소해서라도 다 보여줌
+                                        .layoutPriority(1)         // 다른 텍스트보다 공간을 먼저 차지하도록 우선순위 부여
+                                    Text("생명수")
+                                        .font(.caption)
+                                        .foregroundStyle(.gray)
                                 }
-                                .padding(.vertical, 14)
-                                .padding(.horizontal, 25)
-                                .background(.regularMaterial)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(rewardColor.opacity(rewardPulse > 1.0 ? 0.5 : 0), lineWidth: 2) // 테두리 번쩍임
-                                )
-                                .scaleEffect(rewardPulse) // 전체 바운스
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                                .layoutPriority(1) // 박스 영역에 우선순위 부여하여 너비 확보
                                 
-                                // [위치 B] 생명수 영역 우측 토글 (VStack 바깥쪽)
-                                VStack(spacing: 6) {
-                                    HStack(spacing: 4) {
-                                        Text("알림")
-                                            .font(.caption) // 크기 상향
-                                            .fontWeight(.medium)
-                                            .foregroundStyle(.black) // 배경색이 하얀색일 경우 잘 보이도록 색상 고정
-                                        
-                                        Button {
-                                            showNotifTooltip.toggle()
-                                        } label: {
-                                            Image(systemName: "questionmark.circle.fill")
-                                                .font(.caption) // 아이콘 크기 상향
-                                                .foregroundStyle(.blue.opacity(0.8))
-                                        }
-                                        .popover(isPresented: $showNotifTooltip) {
-                                            Text("On적용시 설정된 시간(\(pref.checkIntervalMinutes)분) 동안 \(pref.stepThreshold)보 미만으로 걸으면 알림을 보냅니다.")
-                                                .font(.subheadline)
-                                                .multilineTextAlignment(.leading)
-                                                .fixedSize(horizontal: false, vertical: true)
-                                                .frame(width: 280) // 너비 명시로 줄바꿈 유도
-                                                .padding()
-                                                .presentationCompactAdaptation(.popover)
-                                        }
-                                    }
+                                HStack {
+                                    Text("오늘 획득: \(pref.dailyEarnedWater) / \(maxDailyWater)")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
                                     
-                                    Toggle("", isOn: Binding(
-                                        get: { pref.isNotificationEnabled },
-                                        set: { _ in toggleNotification(pref: pref) }
-                                    ))
-                                    .labelsHidden()
-                                    .scaleEffect(0.9) // 크기 약간 확대
-                                    .tint(.blue)
+                                    ProgressView(value: Double(pref.dailyEarnedWater), total: Double(maxDailyWater))
+                                        .progressViewStyle(.linear)
+                                        .frame(width: 100)
+                                        .tint(pref.isSuperUser ? .orange : .blue)
                                 }
                             }
-                            .padding(.horizontal, 20)
-                            .frame(maxWidth: .infinity) // 전체 너비 활용
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 25)
+                            .background(.regularMaterial)
+                            .overlay(
+                                Capsule()
+                                    .stroke(rewardColor.opacity(rewardPulse > 1.0 ? 0.5 : 0), lineWidth: 2) // 테두리 번쩍임
+                            )
+                            .scaleEffect(rewardPulse) // 전체 바운스
+                            .clipShape(Capsule())
                             // [핵심] 생명수 변화 감지 로직
                             .onChange(of: pref.lifeWater) { old, new in
                                 //let diff = new - old
@@ -251,7 +241,7 @@ struct ContentView: View {
                                     triggerHeaderPulse()
                                 }
                             }
-                            
+
                             
                             GardenView(pref: pref)
                                 .padding(.bottom, 50) // 하단 여백 확보
@@ -259,8 +249,6 @@ struct ContentView: View {
                         } else {
                             ProgressView().padding()
                         }
-                        
-                        //Spacer()
                     } //end Vstack
                 }
                 // ✅ 상단 고정 배너 (스크롤과 분리)
@@ -296,6 +284,9 @@ struct ContentView: View {
                             }
                         }
                 }
+            }
+            .sheet(isPresented: $showHistory) {
+                StepHistoryView()
             }
 
             .onAppear {
