@@ -6,7 +6,10 @@ import GoogleMobileAds // AdMob 임포트 추가
 
 // 1. 앱이 켜져있을 때 알림 처리를 위한 AppDelegate 클래스 정의
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
-    
+
+    /// StepMonitorApp.init()에서 주입 - UserPreference 조회용
+    var modelContainer: ModelContainer?
+
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
@@ -49,9 +52,31 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             let enabled = (settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional)
 
             Task {
+                // UserPreference에서 실제 알림 시간 설정 읽기
+                let (startMin, endMin, tz) = await MainActor.run { [weak self] () -> (Int, Int, String) in
+                    let tzId = TimeZone.current.identifier
+                    guard let container = self?.modelContainer else {
+                        return (9 * 60, 22 * 60, tzId) // container 미주입 시 기본값
+                    }
+                    let ctx = ModelContext(container)
+                    let prefs = (try? ctx.fetch(FetchDescriptor<UserPreference>())) ?? []
+                    guard let pref = prefs.first else {
+                        return (9 * 60, 22 * 60, tzId)
+                    }
+                    var cal = Calendar.current
+                    cal.timeZone = TimeZone.current
+                    let sc = cal.dateComponents([.hour, .minute], from: pref.startTime)
+                    let ec = cal.dateComponents([.hour, .minute], from: pref.endTime)
+                    let s = (sc.hour ?? 9) * 60 + (sc.minute ?? 0)
+                    let e = (ec.hour ?? 22) * 60 + (ec.minute ?? 0)
+                    return (s, e, tzId)
+                }
                 await DeviceTokenUploader.shared.upsert(
                     deviceToken: token,
-                    isNotificationEnabled: enabled
+                    isNotificationEnabled: enabled,
+                    startMinutes: startMin,
+                    endMinutes: endMin,
+                    timeZone: tz
                 )
             }
         }
@@ -112,6 +137,8 @@ struct StepMonitorApp: App {
             if (try? context.fetch(descriptor).count) == 0 {
                 context.insert(UserPreference())
             }
+            // ✅ AppDelegate에 container 주입 (토큰 upsert 시 UserPreference 조회용)
+            appDelegate.modelContainer = container
             BackgroundStepManager.shared.registerBackgroundTask(container: container)
             Task { await DeviceTokenUploader.shared.flushIfNeeded() }
             Task { await DeviceSettingsUploader.shared.flushIfNeeded() }

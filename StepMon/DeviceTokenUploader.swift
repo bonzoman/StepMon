@@ -15,13 +15,17 @@ actor DeviceTokenUploader {
         let installId: String
         let deviceToken: String
         let isNotificationEnabled: Bool
+        let startMinutes: Int
+        let endMinutes: Int
+        let timeZone: String
         let platform: String      // "iOS"
         let appVersion: String
         let sentAt: String        // ISO8601
     }
 
     // 앱에서 호출: 토큰/알림설정이 바뀌면 여기로
-    func upsert(deviceToken: String, isNotificationEnabled: Bool) {
+    func upsert(deviceToken: String, isNotificationEnabled: Bool,
+                startMinutes: Int, endMinutes: Int, timeZone: String) {
         Task {
             let installId = await MainActor.run { InstallIdManager.installId }
             let appVersion = await MainActor.run {
@@ -32,6 +36,9 @@ actor DeviceTokenUploader {
                 installId: installId,
                 deviceToken: deviceToken,
                 isNotificationEnabled: isNotificationEnabled,
+                startMinutes: startMinutes,
+                endMinutes: endMinutes,
+                timeZone: timeZone,
                 platform: "iOS",
                 appVersion: appVersion,
                 sentAt: ISO8601DateFormatter().string(from: Date())
