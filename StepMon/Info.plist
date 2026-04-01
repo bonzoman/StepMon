@@ -4,8 +4,6 @@
 <dict>
 	<key>UIRequiresFullScreen</key>
 	<true/>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>bnz.stepmon.stepcheck.refresh</string>
@@ -233,6 +231,8 @@
 	<string>개인 맞춤형 광고를 제공하기 위해 사용자의 활동을 추적할 수 있도록 허용해주세요.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>과거 걸음수 통계 데이터를 표시하기 위해 건강 데이터 읽기 권한이 필요합니다.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>측정된 걸음 수 데이터를 바탕으로 건강 정보를 업데이트하고 활동량을 기록하기 위해 건강 데이터 접근 권한이 필요합니다.</string>
 </dict>

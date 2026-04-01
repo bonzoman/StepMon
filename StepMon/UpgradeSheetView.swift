@@ -15,7 +15,7 @@ struct UpgradeSheetView: View {
     
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     let adRewardAmount = 50 // 광고 보상량
-    let coolDownTime: TimeInterval = 180 // 3분 (180초)
+    let coolDownTime: TimeInterval = 1 // (1초)
     
 
     
