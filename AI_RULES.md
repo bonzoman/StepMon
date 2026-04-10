@@ -14,6 +14,6 @@
 
 ## 2. [iOS] 클라이언트 (xcode/StepMon) 컨텍스트
 - 이 프로젝트는 `StepMon` 서비스의 iOS 네이티브 앱 (Swift, SwiftUI) 입니다.
-- 연동 API: OCI 통신용 URL (`https://stimi.xyz`)을 사용합니다.
+- 연동 API: OCI 통신용 URL (`https://stepmon.stimi.xyz`)을 사용합니다.
 - 특징: 
 - 대화 원칙: 항상 한글로 답변하고, SwiftUI에 맞는 최신 iOS 가이드라인을 준수하세요.

@@ -12,8 +12,11 @@ struct UpgradeSheetView: View {
     
     @State private var isWatchingAd = false // 광고 시청 상태(로딩 인디케이터용)
     @State private var now = Date() // 쿨타임 실시간 갱신용
-    
+    @State private var holdingTarget: InvestmentTarget?
+    @State private var holdStartDate: Date?
+
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    let holdRepeatTimer = Timer.publish(every: 0.12, on: .main, in: .common).autoconnect()
     let adRewardAmount = 50 // 광고 보상량
     let coolDownTime: TimeInterval = 1 // (1초)
     
@@ -69,28 +72,26 @@ struct UpgradeSheetView: View {
                     UpgradeRow(
                         title: String(localized: "만보기 나무"),
                         level: pref.treeLevel,
-                        maxLevel: 100, // [추가] 만렙 기준 전달
+                        maxLevel: 100,
                         imageName: GameResourceManager.getMainTreeImage(level: pref.treeLevel),
                         buttonColor: .green,
                         totalCost: treeCost,
-                        currentInvest: pref.treeInvestment
-                    ) {
-                        invest(target: .tree, totalCost: treeCost)
-                    }
-                    
+                        currentInvest: pref.treeInvestment,
+                        target: .tree
+                    )
+
                     // 2. 스텝몬 일꾼
                     let workerCost = getCost(level: pref.workerLevel)
                     UpgradeRow(
                         title: String(localized: "스텝몬 일꾼"),
                         level: pref.workerLevel,
-                        maxLevel: 100, // [추가] 만렙 기준 전달
+                        maxLevel: 100,
                         imageName: GameResourceManager.getMainWorkerImage(level: pref.workerLevel),
                         buttonColor: .blue,
                         totalCost: workerCost,
-                        currentInvest: pref.workerInvestment
-                    ) {
-                        invest(target: .worker, totalCost: workerCost)
-                    }
+                        currentInvest: pref.workerInvestment,
+                        target: .worker
+                    )
                     
                     // 일꾼 효율 설명
                     HStack {
@@ -108,6 +109,18 @@ struct UpgradeSheetView: View {
                 .padding(.horizontal) // 좌우 여백만 적용
             }
             .background(Color(uiColor: .systemGroupedBackground))
+            .onReceive(holdRepeatTimer) { _ in
+                guard let target = holdingTarget,
+                      let start = holdStartDate,
+                      Date().timeIntervalSince(start) > 0.35 else { return }
+                let currentLevel = target == .tree ? pref.treeLevel : pref.workerLevel
+                if currentLevel >= 100 || (!pref.isSuperUser && pref.lifeWater < 10) {
+                    stopHolding()
+                    return
+                }
+                let currentCost = getCost(level: currentLevel)
+                invest(target: target, totalCost: currentCost)
+            }
             .safeAreaInset(edge: .bottom) {
                 if pref.lifeWater < 10 {
                     adFloatingBar
@@ -125,6 +138,9 @@ struct UpgradeSheetView: View {
                 if !adManager.isAdLoaded {
                     adManager.loadAd()
                 }
+            }
+            .onDisappear {
+                stopHolding()
             }
         }
     }
@@ -193,9 +209,10 @@ struct UpgradeSheetView: View {
     
     // UpgradeRow 컴포넌트
     @ViewBuilder
-    func UpgradeRow(title: String, level: Int, maxLevel: Int, imageName: String, buttonColor: Color, totalCost: Int, currentInvest: Int, action: @escaping () -> Void) -> some View {
-        
-        let isMax = level >= maxLevel // 만렙 여부 확인
+    func UpgradeRow(title: String, level: Int, maxLevel: Int, imageName: String, buttonColor: Color, totalCost: Int, currentInvest: Int, target: InvestmentTarget) -> some View {
+
+        let isMax = level >= maxLevel
+        let isDisabled = isMax || (!pref.isSuperUser && pref.lifeWater < 10)
         
         HStack(spacing: 12) {
             Image(imageName)
@@ -231,13 +248,13 @@ struct UpgradeSheetView: View {
             
             Spacer()
             
-            Button(action: action) {
+            Button(action: {}) {
                 VStack(spacing: 0) {
                     if isMax {
                         Image(systemName: "checkmark.seal.fill")
-                            .font(.system(size: 14)) // 아이콘 크기 고정
+                            .font(.system(size: 14))
                         Text("완료")
-                            .font(.system(size: 8)) // 텍스트 크기 고정
+                            .font(.system(size: 8))
                             .bold()
                     } else if pref.isSuperUser {
                         Text("UP")
@@ -245,19 +262,34 @@ struct UpgradeSheetView: View {
                             .bold()
                     } else {
                         Image(systemName: "drop.fill")
-                            //.font(.system(size: 12))
                         Text("10")
                             .font(.caption)
-//                            .font(.system(size: 10))
                             .bold()
                     }
                 }
-                .frame(width: 40, height: 40) // [수정] 버튼 크기 고정 (높이 축소)
-
+                .frame(width: 40, height: 40)
             }
             .buttonStyle(.borderedProminent)
-            .tint(isMax ? .gray : buttonColor) // 만렙시 회색 버튼
-            .disabled(isMax || (!pref.isSuperUser && pref.lifeWater < 10)) // 만렙시 비활성화
+            .tint(isMax ? .gray : buttonColor)
+            .disabled(isDisabled)
+            .scaleEffect(holdingTarget == target ? 0.85 : 1.0)
+            .animation(.easeInOut(duration: 0.1), value: holdingTarget == target)
+            .overlay(
+                Color.clear
+                    .contentShape(Rectangle())
+                    .allowsHitTesting(!isDisabled)
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { _ in
+                                if holdingTarget == nil {
+                                    startHolding(target: target)
+                                }
+                            }
+                            .onEnded { _ in
+                                stopHolding()
+                            }
+                    )
+            )
             
             
         }
@@ -317,6 +349,19 @@ struct UpgradeSheetView: View {
         }
     }
     
+    private func startHolding(target: InvestmentTarget) {
+        guard holdingTarget == nil else { return }
+        holdingTarget = target
+        holdStartDate = Date()
+        let cost = getCost(level: target == .tree ? pref.treeLevel : pref.workerLevel)
+        invest(target: target, totalCost: cost)
+    }
+
+    private func stopHolding() {
+        holdingTarget = nil
+        holdStartDate = nil
+    }
+
     func triggerTapHaptic() {
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
