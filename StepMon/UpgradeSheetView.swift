@@ -17,7 +17,7 @@ struct UpgradeSheetView: View {
 
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     let holdRepeatTimer = Timer.publish(every: 0.12, on: .main, in: .common).autoconnect()
-    let adRewardAmount = 50 // 광고 보상량
+    let adRewardAmount = 200 // 광고 보상량
     let coolDownTime: TimeInterval = 1 // (1초)
     
 
@@ -122,9 +122,7 @@ struct UpgradeSheetView: View {
                 invest(target: target, totalCost: currentCost)
             }
             .safeAreaInset(edge: .bottom) {
-                if pref.lifeWater < 10 {
-                    adFloatingBar
-                }
+                adFloatingBar
             }
             .navigationTitle("정원 관리소")
             .navigationBarTitleDisplayMode(.inline)

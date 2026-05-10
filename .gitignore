@@ -1,0 +1,69 @@
+# ===== macOS =====
+.DS_Store
+._*
+.AppleDouble
+.LSOverride
+Icon?
+
+# ===== Xcode =====
+# Build / 산출물
+build/
+DerivedData/
+*.ipa
+*.app
+*.dSYM.zip
+*.dSYM
+
+# 사용자별 설정 (워크스페이스/스킴 사용자 상태)
+xcuserdata/
+*.xcuserstate
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+*.hmap
+*.xccheckout
+*.xcscmblueprint
+
+# Xcode 자동 생성 / 임시
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.swp
+*~.nib
+
+# ===== Swift Package Manager =====
+.build/
+.swiftpm/
+Packages/
+Package.pins
+# Package.resolved 는 의도적으로 커밋 (의존성 버전 고정)
+
+# ===== CocoaPods (현재 미사용, 추후 도입 대비) =====
+Pods/
+# Podfile.lock 은 커밋
+
+# ===== Fastlane (도입 대비) =====
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# ===== Claude Code / 작업 도구 =====
+.claude/
+
+# ===== IDE 기타 =====
+.idea/
+.vscode/
+*.iml
+
+# ===== 시크릿 / 키 (혹시라도) =====
+*.p8
+*.p12
+*.cer
+*.mobileprovision
+GoogleService-Info.plist.local

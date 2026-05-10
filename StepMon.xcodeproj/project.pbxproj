@@ -7,10 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0B05158B2F5CFE4F00A4C64B /* AI_RULES.md in Resources */ = {isa = PBXBuildFile; fileRef = 0B05158A2F5CFE4F00A4C64B /* AI_RULES.md */; };
-		0B05158C2F5CFE4F00A4C64B /* AI_RULES.md in Resources */ = {isa = PBXBuildFile; fileRef = 0B05158A2F5CFE4F00A4C64B /* AI_RULES.md */; };
-		0B05158D2F5CFE4F00A4C64B /* AI_RULES.md in Resources */ = {isa = PBXBuildFile; fileRef = 0B05158A2F5CFE4F00A4C64B /* AI_RULES.md */; };
-		0B05158E2F5CFE4F00A4C64B /* AI_RULES.md in Resources */ = {isa = PBXBuildFile; fileRef = 0B05158A2F5CFE4F00A4C64B /* AI_RULES.md */; };
 		0B3B63EC2F2F742800D38E18 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 0B3B63EB2F2F742800D38E18 /* Localizable.xcstrings */; };
 		0B3B63ED2F2F742800D38E18 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 0B3B63EB2F2F742800D38E18 /* Localizable.xcstrings */; };
 		0B3B63EE2F2F742800D38E18 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 0B3B63EB2F2F742800D38E18 /* Localizable.xcstrings */; };
@@ -60,7 +56,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		0B05158A2F5CFE4F00A4C64B /* AI_RULES.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = AI_RULES.md; sourceTree = "<group>"; };
 		0B3B63EB2F2F742800D38E18 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		0B433B1E2F27B1FA005A42E4 /* StepMonWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = StepMonWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		0B433B202F27B1FA005A42E4 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -164,7 +159,6 @@
 		0BBA62142F24F1AD00301AAE = {
 			isa = PBXGroup;
 			children = (
-				0B05158A2F5CFE4F00A4C64B /* AI_RULES.md */,
 				0B3B63EB2F2F742800D38E18 /* Localizable.xcstrings */,
 				0B433B3A2F27B289005A42E4 /* StepMonWidgetExtension.entitlements */,
 				0BBA621F2F24F1AD00301AAE /* StepMon */,
@@ -341,7 +335,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0B05158B2F5CFE4F00A4C64B /* AI_RULES.md in Resources */,
 				0B3B63EF2F2F742800D38E18 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -350,7 +343,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0B05158E2F5CFE4F00A4C64B /* AI_RULES.md in Resources */,
 				0B3B63EC2F2F742800D38E18 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -359,7 +351,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0B05158D2F5CFE4F00A4C64B /* AI_RULES.md in Resources */,
 				0B3B63ED2F2F742800D38E18 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -368,7 +359,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0B05158C2F5CFE4F00A4C64B /* AI_RULES.md in Resources */,
 				0B3B63EE2F2F742800D38E18 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
