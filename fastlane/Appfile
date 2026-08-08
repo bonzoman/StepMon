@@ -1,0 +1,8 @@
+# App Store Connect 앱/팀 식별 정보
+# (비밀값 아님 — 앱 번들ID와 팀ID)
+
+app_identifier("com.bnz.StepMon")  # 앱 Bundle ID
+team_id("6N5396RU93")              # Apple Developer 팀 ID
+
+# 로그인은 Apple ID가 아닌 App Store Connect API 키(.p8)로 처리합니다.
+# 키 값은 fastlane/.env (git 제외)에서 불러옵니다.

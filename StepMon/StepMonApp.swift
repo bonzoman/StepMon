@@ -122,7 +122,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 struct StepMonitorApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @Environment(\.scenePhase) private var scenePhase // 앱 상태 감시용
-    
+    @State private var didInitAds = false // ATT 요청 + AdMob 초기화 1회 가드
+
     let container: ModelContainer
     
     init() {
@@ -161,11 +162,15 @@ struct StepMonitorApp: App {
     }
 
     private func requestTrackingAuthorization() {
+        // ATT 요청 + AdMob 초기화는 앱 생명주기당 1회만 수행 (포그라운드 복귀마다 재실행 방지)
+        guard !didInitAds else { return }
+        didInitAds = true
+
         // 약간의 지연을 주어 앱 UI가 안정된 후 팝업이 뜨도록 함
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             ATTrackingManager.requestTrackingAuthorization { status in
                 print("🔍 ATT 권한 상태: \(status.rawValue)")
-                
+
                 // 권한 응답 후(또는 이미 결정된 후) AdMob SDK 초기화
                 MobileAds.shared.start(completionHandler: nil)
             }

@@ -47,11 +47,13 @@ Package.pins
 Pods/
 # Podfile.lock 은 커밋
 
-# ===== Fastlane (도입 대비) =====
+# ===== Fastlane =====
 fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+fastlane/.env
+fastlane/AuthKey*.p8
 
 # ===== Claude Code / 작업 도구 =====
 .claude/

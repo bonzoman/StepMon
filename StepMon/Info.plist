@@ -10,11 +10,9 @@
 	<string>ca-app-pub-9944760674540476~6818558045</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
-		<key>NSAllowsArbitraryLoadsForMedia</key>
-		<true/>
-		<key>NSAllowsArbitraryLoadsInWebContent</key>
+		<!-- 사설망(예: DEBUG 로컬 백엔드 192.168.0.50) HTTP 만 허용.
+		     공용 인터넷에는 ATS 가 그대로 적용되어 심사 리스크 없음. -->
+		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
 	<key>SKAdNetworkItems</key>

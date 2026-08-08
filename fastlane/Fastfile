@@ -1,0 +1,175 @@
+# =============================================================
+#  StepMon 배포 자동화 Fastfile
+#
+#  사용법:
+#    fastlane release version:1.0.7      # 심사 제출까지 전자동
+#    fastlane upload  version:1.0.7      # 업로드만 (심사 제출 안 함)
+#    fastlane build                      # 로컬 빌드 테스트 (업로드 안 함)
+#
+#  version 을 생략하면 실행 중에 물어봅니다.
+#
+#  ⚠️ StepMon 은 AdMob(Google Mobile Ads) + ATT 를 사용하므로
+#     IDFA 신고(add_id_info_*)가 glucoseImporter 와 다릅니다.
+# =============================================================
+
+default_platform(:ios)
+
+# --- 공통 설정 -------------------------------------------------
+SCHEME     = "StepMon"
+BUNDLE_ID  = "com.bnz.StepMon"
+OUTPUT_DIR = "./build"
+
+# App Store Connect API 키 로드 (fastlane/.env 의 값 + fastlane/AuthKey.p8)
+def load_asc_api_key
+  app_store_connect_api_key(
+    key_id:       ENV["ASC_KEY_ID"],
+    issuer_id:    ENV["ASC_ISSUER_ID"],
+    key_filepath: File.expand_path("AuthKey.p8", __dir__),
+    in_house:     false
+  )
+end
+
+# 마케팅 버전(1.0.7 등)을 인자 또는 프롬프트로 결정
+def resolve_version(options)
+  version = options[:version]
+  version ||= UI.input("배포할 버전 번호를 입력하세요 (예: 1.0.7): ")
+  UI.user_error!("버전 번호가 필요합니다.") if version.to_s.strip.empty?
+  version.strip
+end
+
+platform :ios do
+
+  # -----------------------------------------------------------
+  # 로컬 빌드 테스트 (서명/아카이브까지만, 업로드 없음)
+  # API 키 없이도 실행 가능. 설정이 올바른지 먼저 확인할 때 사용.
+  # -----------------------------------------------------------
+  lane :build do
+    build_app(
+      scheme: SCHEME,
+      output_directory: OUTPUT_DIR,
+      clean: true,
+      export_method: "app-store",
+      # 암호화 수출 규정 질문 자동 응답(표준 HTTPS만 사용 → 비해당).
+      xcargs: "INFOPLIST_KEY_ITSAppUsesNonExemptEncryption=NO"
+    )
+  end
+
+  # -----------------------------------------------------------
+  # 업로드만: 빌드 → App Store Connect 업로드 (심사 제출 X)
+  # -----------------------------------------------------------
+  lane :upload do |options|
+    do_release(options.merge(submit: false))
+  end
+
+  # -----------------------------------------------------------
+  # 전자동 배포: 빌드 → 업로드 → 릴리즈노트 반영 → 심사 제출
+  # -----------------------------------------------------------
+  lane :release do |options|
+    do_release(options.merge(submit: true))
+  end
+
+  # -----------------------------------------------------------
+  # 복구용: 진행 중인 심사 제출 취소
+  # (예: 리젝 후 새 빌드 제출하려는데 "review submission already in progress" 날 때)
+  # -----------------------------------------------------------
+  lane :cancel_review do
+    load_asc_api_key   # Spaceship 토큰 세팅
+    app = Spaceship::ConnectAPI::App.find(BUNDLE_ID)
+    UI.user_error!("앱을 찾지 못함: #{BUNDLE_ID}") unless app
+
+    sub = app.get_in_progress_review_submission(platform: Spaceship::ConnectAPI::Platform::IOS)
+    if sub
+      UI.message("진행 중 리뷰 제출 발견 → 취소 (id=#{sub.id})")
+      sub.cancel_submission
+      UI.success("리뷰 제출 취소 요청 완료")
+    else
+      UI.message("진행 중인 리뷰 제출 없음")
+    end
+  end
+
+  # -----------------------------------------------------------
+  # 복구용: 바이너리 재업로드 없이 메타데이터(릴리즈노트)만 반영 + 심사 제출
+  # 이미 빌드가 올라간 상태에서 릴리즈노트 누락 등으로 제출만 실패했을 때 사용.
+  # -----------------------------------------------------------
+  lane :submit_only do |options|
+    api_key = load_asc_api_key
+    version = resolve_version(options)
+
+    upload_to_app_store(
+      api_key: api_key,
+      app_identifier: BUNDLE_ID,
+      app_version: version,
+      skip_binary_upload: true,   # 바이너리는 이미 올라감 → 재업로드 안 함
+      skip_screenshots: true,
+      force: true,
+      precheck_include_in_app_purchases: false,
+      submit_for_review: true,
+      automatic_release: true,
+      submission_information: {
+        add_id_info_uses_idfa: true,
+        add_id_info_serves_ads: true,
+        add_id_info_tracks_install: true,
+        add_id_info_tracks_action: false,
+        add_id_info_limits_tracking: true
+      }
+    )
+
+    UI.success("🎉 심사 제출 완료!")
+  end
+
+  # -----------------------------------------------------------
+  # 실제 동작 (upload / release 공용)
+  # -----------------------------------------------------------
+  private_lane :do_release do |options|
+    api_key = load_asc_api_key
+    version = resolve_version(options)
+
+    # App Store Connect 에 이미 올라간 최고 빌드번호 +1 (충돌 방지, 로컬 상태 불필요)
+    latest = latest_testflight_build_number(
+      api_key: api_key,
+      app_identifier: BUNDLE_ID,
+      version: version,
+      initial_build_number: 0
+    )
+    build_number = latest + 1
+    UI.message("이번 빌드 번호: #{build_number} (버전 #{version})")
+
+    # 빌드 & 서명 (버전/빌드번호는 프로젝트 파일 수정 없이 주입)
+    # 위젯 익스텐션(StepMonWidgetExtension)은 StepMon 스킴 아카이브에 자동 포함됨.
+    build_app(
+      scheme: SCHEME,
+      output_directory: OUTPUT_DIR,
+      clean: true,
+      export_method: "app-store",
+      xcargs: [
+        "MARKETING_VERSION=#{version}",
+        "CURRENT_PROJECT_VERSION=#{build_number}",
+        "INFOPLIST_KEY_ITSAppUsesNonExemptEncryption=NO"
+      ].join(" ")
+    )
+
+    # 업로드 + 메타데이터(릴리즈노트) 반영 + (옵션) 심사 제출
+    upload_to_app_store(
+      api_key: api_key,
+      app_identifier: BUNDLE_ID,
+      app_version: version,
+      # 메타데이터: fastlane/metadata/<locale>/release_notes.txt 만 편집하면 됨
+      skip_screenshots: true,      # 스크린샷은 기존 것 유지
+      skip_binary_upload: false,
+      force: true,                 # 메타데이터 HTML 미리보기 확인 생략
+      precheck_include_in_app_purchases: false,
+      submit_for_review: options[:submit],
+      automatic_release: true,     # 승인되면 자동 출시 (원치 않으면 false)
+      submission_information: {
+        # ⚠️ StepMon 은 AdMob 보상형 광고를 노출하므로 IDFA 사용을 신고해야 함.
+        add_id_info_uses_idfa: true,       # IDFA 사용함
+        add_id_info_serves_ads: true,      # 앱 내에서 광고 노출
+        add_id_info_tracks_install: true,  # 광고 클릭→설치 어트리뷰션(SKAdNetwork)
+        add_id_info_tracks_action: false,  # 광고 클릭→앱 내 액션 추적 안 함
+        add_id_info_limits_tracking: true  # ATT 미허가 시 추적 제한 준수
+      }
+    )
+
+    UI.success(options[:submit] ? "🎉 심사 제출까지 완료!" : "✅ 업로드 완료 (심사는 수동 제출)")
+  end
+end

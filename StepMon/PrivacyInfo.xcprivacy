@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- 앱 자체(1st-party) 코드는 추적을 하지 않으므로 false.
+	     ATT/IDFA/개인 맞춤 광고 추적은 Google Mobile Ads SDK 가 수행하며,
+	     SDK 가 자체 PrivacyInfo.xcprivacy 로 NSPrivacyTracking=true + 추적 도메인을 별도 신고함.
+	     ⚠️ Apple 검증: NSPrivacyTracking=true 이면 NSPrivacyTrackingDomains 가 비어 있으면 안 됨(ITMS-91064).
+	        앱 코드는 추적 도메인에 직접 접속하지 않으므로 false + 빈 배열이 올바름. -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+
+	<!-- 앱 자체 코드가 단말 밖(백엔드)으로 전송하는 데이터.
+	     걸음 수는 단말에만 저장하고 서버로 보내지 않으므로 '수집'에 해당하지 않음. -->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array>
+		<dict>
+			<!-- installId(영구 UUID) + APNs deviceToken 을 푸시 발송용으로 서버에 전송 -->
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeDeviceID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+	</array>
+
+	<!-- Required Reason API: UserDefaults (본인 전용 + App Group 공유) -->
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+				<string>1C8F.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

@@ -60,7 +60,7 @@ struct ContentView: View {
                         // 헤더
                         HStack {
                             Spacer()
-                            Text("Step Mon")
+                            Text("StepMon")
                                 .font(.system(.largeTitle, design: .rounded))
                                 .fontWeight(.heavy)
                                 .foregroundStyle(
