@@ -260,8 +260,10 @@ final class BackgroundStepManager {
 
     private func sendNotification(steps: Int, threshold: Int) {
         let content = UNMutableNotificationContent()
-        content.title = "⚠️ 움직임 부족"
-        content.body = "목표: \(threshold)보 / 현재: \(steps)보. 잠시 걸어보세요!"
+        // ✅ String(localized:) 로 감싸야 문자열 카탈로그(Localizable.xcstrings)에서
+        //    사용자 로케일에 맞는 번역이 조회됨. 리터럴 직접 대입 시 항상 원문(한국어)만 나옴.
+        content.title = String(localized: "⚠️ 움직임 부족")
+        content.body = String(localized: "목표: \(threshold)보 / 현재: \(steps)보. 잠시 걸어보세요!")
         content.sound = .default
 
         let request = UNNotificationRequest(
