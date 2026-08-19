@@ -172,4 +172,18 @@ platform :ios do
 
     UI.success(options[:submit] ? "🎉 심사 제출까지 완료!" : "✅ 업로드 완료 (심사는 수동 제출)")
   end
+
+  # -----------------------------------------------------------
+  # 읽기전용: 현재 LIVE/EDIT 버전 상태 + 진행 중 심사 제출 확인
+  # -----------------------------------------------------------
+  lane :status do
+    load_asc_api_key
+    app = Spaceship::ConnectAPI::App.find(BUNDLE_ID)
+    edit = app.get_edit_app_store_version(platform: Spaceship::ConnectAPI::Platform::IOS)
+    live = app.get_live_app_store_version(platform: Spaceship::ConnectAPI::Platform::IOS)
+    UI.message("LIVE: #{live&.version_string} (#{live&.app_store_state})")
+    UI.message("EDIT: #{edit&.version_string} (#{edit&.app_store_state})")
+    sub = app.get_in_progress_review_submission(platform: Spaceship::ConnectAPI::Platform::IOS)
+    UI.message("IN-PROGRESS 심사 제출: #{sub ? sub.state : '없음'}")
+  end
 end
